@@ -4,41 +4,33 @@ var RJ = RJ || {};
 (function(){
         var WebSocketServer = require('websocket').server;
         var http = require('http');
+        var fs = require('fs');
+        var clientHtml = fs.readFileSync('client.html');
+        var PORT = 8080;
+        var plainHttpServer;
+        var wsServer;
 
-        var server = http.createServer(function(request, response) {
-                console.log((new Date()) + ' Received request for ' + request.url);
-                response.writeHead(404);
-                response.end();
+        plainHttpServer = http.createServer( function(req, res) {
+                res.writeHead(200, { 'Content-Type': 'text/html'});
+                res.end(clientHtml);
         });
-        server.listen(8080, function() {
+        plainHttpServer.listen(8080, function() {
                 console.log((new Date()) + ' Server is listening on port 8080');
         });
-        wsServer = new WebSocketServer({
-                httpServer: server,
-                autoAcceptConnections: false
-        });
 
-        var originIsAllowed = function(origin) {
-                return true;
-        };
-
+        wsServer = new WebSocketServer({httpServer: plainHttpServer});
         wsServer.on('request', function(request) {
-                if (!originIsAllowed(request.origin)) {
-                        request.reject();
-                        console.log((new Date()) + ' Connection from origin ' + request.origin + ' rejected.');
-                        return;
-                }
-                var connection = request.accept('echo-protocol', request.origin);
-                console.log((new Date()) + ' Connection accepted.');
+                var connection;
+
+                console.log((new Date()) + ' request ' + request.origin);
+                connection = request.accept(null, request.origin);
+                console.log((new Date()) + ' Connection accepted. Peer ' + connection.remoteAddress);
+
                 connection.on('message', function(message) {
-                        if (message.type === 'utf8') {
-                                console.log('Received Message: ' + message.utf8Data);
-                                connection.sendUTF(message.utf8Data);
-                        } else if (message.type === 'binary') {
-                                console.log('Received Binary Message of ' + message.binaryData.length + ' bytes');
-                                connection.sendBytes(message.binaryData);
-                        }
+                        var data = JSON.parse(msg.utf8Data);
+                        console.log(data);
                 }); 
+
                 connection.on('close', function(reasonCode, description) {
                         console.log((new Date()) + ' Peer ' + connection.remoteAddress + ' disconnected.');
                 });
