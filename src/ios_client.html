@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+</head>
+<body>
+<section class="mainSection">
+  <label><input class="directionButton" type="button" id="forwardButton" data-direction="forward">&uarr;</label>
+  <label><input class="directionButton" type="button" id="leftButton" data-direction="left">&larr;</label>
+  <label><input class="directionButton" type="button" id="rightButton" data-direction="right">&rarr;</label>
+  <label><input class="directionButton" type="button" id="backButton" data-direction="back">&darr;</label>
+<section>
+
+<script src="http://code.jquery.com/jquery.min.js"></script>
+<script>
+(function($) {
+  var webSocket;
+  webSocket = new WebSocket("ws://raspberrypi.local:8080");
+  webSocket.onmessage = function(e) {};
+  webSocket.onclose = function (e) {};
+
+  $(".directionButton").on('click', function() {
+    if(webSocket.readyState==1) {
+      webSocket.send(JSON.stringfly($(this).data()));
+    }
+  });
+}(jQuery));
+</script>
+</body>
+</html>
+
