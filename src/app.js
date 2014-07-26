@@ -5,6 +5,7 @@ var RJ = RJ || {};
     var PORT = 8080;
     var SERIAL_PORT = "/dev/ttyACM0";
     var CLIENT_PAGE = "client.html";
+
     var SERIAL_PARAMS = {
         baudRate: 115200,
     	dataBits: 8,
@@ -12,6 +13,16 @@ var RJ = RJ || {};
     	stopBits: 1,
     	flowControl: false
     };
+
+    var VIDEO_PARAMS = [
+        "-i", "/dev/video0",
+        "-s", "320x240",
+        "-f", "video4linux2",
+        "-f", "mpeg1video",
+        "-b", "800k",
+        "-r", "30",
+    ];
+
     var WebSocketServer = require('websocket').server;
     var http = require('http');
     var fs = require('fs');
@@ -39,9 +50,11 @@ var RJ = RJ || {};
         var data = JSON.parse(message.utf8Data);
         log(data.direction);
         port.write(data.direction, function(error, results) {
-            log("serial error:" + error);
-            log("serial result:" + results);
+            if(error) {
+                log("write error:" + error);
+            }
         });
+        port.drain(function(){});
     };
 
     /* Serial port handler */
