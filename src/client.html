@@ -20,8 +20,9 @@
   webSocket.onclose = function (e) {};
 
   $(".directionButton").on('click', function() {
-    if(webSocket.readyState==1) {
-      webSocket.send(JSON.stringfly($(this).data()));
+    var data = $(this).data();
+    if(webSocket.readyState == 1) {
+      webSocket.send(JSON.stringify(data));
     }
   });
 }(jQuery));
