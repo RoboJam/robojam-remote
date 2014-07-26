@@ -5,26 +5,40 @@
 </head>
 <body>
 <section class="mainSection">
-  <input class="directionButton" type="button" id="forwardButton" data-direction="f" value="&uarr;">
-  <input class="directionButton" type="button" id="leftButton" data-direction="l" value="&larr;">
-  <input class="directionButton" type="button" id="rightButton" data-direction="r" value="&rarr;">
-  <input class="directionButton" type="button" id="backButton" data-direction="b" value="&darr;">
+  <section class="inputSection">
+    <input type="button" id="forwardButton" data-direction="f" value="&uarr;">
+    <input type="button" id="leftButton" data-direction="l" value="&larr;">
+    <input type="button" id="rightButton" data-direction="r" value="&rarr;">
+    <input type="button" id="backButton" data-direction="b" value="&darr;">
+  </section>
+  <section class="cameraSection">
+    <canvas id="cameraCanvas" width="320" height="240">
+  </section>
 <section>
 
-<script src="http://code.jquery.com/jquery.min.js"></script>
+<script type="text/javascript" src="http://code.jquery.com/jquery.min.js"></script>
+<script type="text/javascript" src="jsmpg.js"></script>
 <script>
 (function($) {
-  var webSocket;
-  webSocket = new WebSocket("ws://raspberrypi.local:8080");
-  webSocket.onmessage = function(e) {};
-  webSocket.onclose = function (e) {};
+    var webSocket;
+    var canvas;
+    var context;
+    var player;
 
-  $(".directionButton").on('click', function() {
-    var data = $(this).data();
-    if(webSocket.readyState == 1) {
-      webSocket.send(JSON.stringify(data));
-    }
-  });
+    webSocket = new WebSocket("ws://raspberrypi.local:8080");
+    $(".directionButton").on('click', function() {
+        var data = $(this).data();
+        if(webSocket.readyState == 1) {
+            webSocket.send(JSON.stringify(data));
+        }
+    });
+
+    canvas = $("#cameraCanvas");
+    context = canvas.getContext("2d");
+    context.fillStyle = "#fff";
+    context.fillText('Loading...', canvas.width/2-30, canvas.height/3);
+
+    player = new jsmpeg(webSocket, {canvas:canvas});
 }(jQuery));
 </script>
 </body>

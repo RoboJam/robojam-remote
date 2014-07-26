@@ -4,7 +4,10 @@ var RJ = RJ || {};
 (function(){
     var PORT = 8080;
     var SERIAL_PORT = "/dev/ttyACM0";
-    var CLIENT_PAGE = "client.html";
+    var CONTEXT_ROOT = "./";
+    var STREAM_MAGIC_BYTES = "jsmp"; 
+    var WIDTH = 320;
+    var HEIGHT = 240;
 
     var SERIAL_PARAMS = {
         baudRate: 115200,
@@ -15,17 +18,20 @@ var RJ = RJ || {};
     };
 
     var VIDEO_PARAMS = [
-        "-i", "/dev/video0",
-        "-s", "320x240",
         "-f", "video4linux2",
-        "-f", "mpeg1video",
+        "-s", "" + WIDTH + "x" + HEIGHT,
         "-b", "800k",
         "-r", "30",
+        "-i", "/dev/video0",
+        "-f", "mpeg1video",
+        "pipe:1"
     ];
 
-    var WebSocketServer = require('websocket').server;
-    var http = require('http');
-    var fs = require('fs');
+    var DATA_OPTS = {binary:true};
+
+    var WebSocketServer = require("websocket").server;
+    var http = require("http");
+    var fs = require("fs");
     var SerialPort = require("serialport").SerialPort;
     var port;
     var plainHttpServer;
@@ -34,6 +40,32 @@ var RJ = RJ || {};
     var log;
     var onMessage;
     var onSerialData;
+
+    var ffmpeg = require("child_process").spawn("avconv", VIDEO_PARAMS);
+    ffmpeg.stdout.on("data", function(data) {
+        var clients;
+        var client;
+        var i;
+        if(wsServer) {
+            return;
+        }
+
+        clients = wsServer.clients;
+        for(i in clients ) {
+            client = clients[i];
+            if (client.readyState == 1) {
+                client.send(data, DATA_OPTS);
+                log("send data length:" + data.length);
+            }
+        }
+    });
+    ffmpeg.stderr.setEncoding("utf8");
+    ffmpeg.stderr.on("data", function(data) {
+        if(/^execvp\(\)/.test(data)) {
+            log("failed to start ffmpeg");
+            process.exit(1);
+        }
+    });
 
     /* open serial port */
     port = new SerialPort(SERIAL_PORT, SERIAL_PARAMS, function(error) {
@@ -45,7 +77,14 @@ var RJ = RJ || {};
         console.log(new Date() + " " + msg);
     };
 
-    /* WebSocket meessage handler */
+    /* WebSocket handlers */
+    onConnection = function(socket) {
+        var streamHeader = new Buffer(8);
+        streamHeader.write(STREAM_MAGIC_BYTES);
+        streamHeader.writeUInt16BE(width, 4);
+        streamHeader.writeUInt16BE(height, 6);
+        socket.send(streamHeader, DATA_OPTS);
+    };
     onMessage = function(message) {
         var data = JSON.parse(message.utf8Data);
         log(data.direction);
