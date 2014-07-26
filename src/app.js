@@ -2,26 +2,32 @@
 
 var RJ = RJ || {};
 (function(){
+    var PORT = 8080;
+    var SERIAL_PORT = "/dev/ttyACM0";
+    var CLIENT_PAGE = "client.html";
+    var SERIAL_PARAMS = {
+        baudRate: 115200,
+    	dataBits: 8,
+    	parity: "none",
+    	stopBits: 1,
+    	flowControl: false
+    };
     var WebSocketServer = require('websocket').server;
     var http = require('http');
     var fs = require('fs');
     var SerialPort = require("serialport").SerialPort;
-    var clientHtml = fs.readFileSync('client.html');
-    var PORT = 8080;
-    var SERIAL_PORT = "/dev/ttyACM0";
-    var port = new SerialPort(SERIAL_PORT, {
-        baudRate: 115200,
-	dataBits: 8,
-	parity: "none",
-	stopBits: 1,
-	flowControl: false
-    });
+    var port;
     var plainHttpServer;
     var wsServer;
 
     var log;
     var onMessage;
     var onSerialData;
+
+    /* open serial port */
+    port = new SerialPort(SERIAL_PORT, SERIAL_PARAMS, function(error) {
+        log("serial port open error:" + error);
+    });
 
     /* logging function */
     log = function(msg) {
@@ -49,16 +55,17 @@ var RJ = RJ || {};
     port.on("open", function() {
         /* startup server after opened serial port */
         log("open serialport!");
-        plainHttpServer.listen(PORT, function() {
-            log("Server is listening on port " + PORT);
-        });
     });
     port.on("data", onSerialData);
 
     /* HTTP server for static files. */
     plainHttpServer = http.createServer( function(req, res) {
         res.writeHead(200, {'Content-Type': 'text/html'});
-        res.end(clientHtml);
+        res.end(fs.readFileSync(CLIENT_PAGE));
+    });
+
+    plainHttpServer.listen(PORT, function() {
+        log("Server is listening on port " + PORT);
     });
 
     wsServer = new WebSocketServer({httpServer: plainHttpServer});
