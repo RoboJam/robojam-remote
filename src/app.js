@@ -14,6 +14,7 @@ var RJ = RJ || {};
     var PORT = 8080;
     var SERIAL_PORT = "/dev/ttyACM0";
     var CLIENT_PAGE = "client.html";
+    var IOS_CLIENT_PAGE = "ios_client.html";
     var JSMPG = "jsmpg.js";
     var STREAM_MAGIC_BYTES = "jsmp"; 
     var WIDTH = 320;
@@ -118,6 +119,9 @@ var RJ = RJ || {};
         if(pathname == "" || pathname == CLIENT_PAGE) {
             res.writeHead(200, {'Content-Type': 'text/html'});
             res.end(fs.readFileSync(CLIENT_PAGE));
+        } else if(pathname == "" || pathname == IOS_CLIENT_PAGE) {
+            res.writeHead(200, {'Content-Type': 'text/html'});
+            res.end(fs.readFileSync(IOS_CLIENT_PAGE));
         } else if(pathname == JSMPG) {
             res.writeHead(200, {'Content-Type': 'text/javascript'});
             res.end(fs.readFileSync(JSMPG));
