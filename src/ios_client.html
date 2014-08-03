@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+</head>
+<body>
+<section class="mainSection">
+  <section class="inputSection">
+    <input type="button" id="forwardButton" data-direction="f" value="&uarr;">
+    <input type="button" id="leftButton" data-direction="l" value="&larr;">
+    <input type="button" id="rightButton" data-direction="r" value="&rarr;">
+    <input type="button" id="backButton" data-direction="b" value="&darr;">
+  </section>
+  <section class="cameraSection">
+    <canvas id="cameraCanvas" width="320" height="240">
+  </section>
+  <section>
+    <div id="output"></div>
+    <div id="output2"></div>
+  </section>
+<section>
+
+<script>
+  var needErr_=true;
+  window.onerror = function(errorMsg, url, lineNumber){
+       if(needErr_)alert(url+" ["+lineNumber+"] "+errorMsg);needErr_=false;
+  }
+</script>
+
+<script type="text/javascript" src="http://code.jquery.com/jquery.min.js"></script>
+<script type="text/javascript" src="jsmpg.js"></script>
+<script type="text/javascript" src="numeric-1.2.6.js"></script>
+<script>
+(function($) {
+    var webSocket;
+    var canvas;
+    var context;
+    var player;
+
+    webSocket = new WebSocket("ws://raspberrypi.local:8080");
+    $(".directionButton").on('click', function() {
+        var data = $(this).data();
+        if(webSocket.readyState == 1) {
+            webSocket.send(JSON.stringify(data));
+        }
+    });
+
+    canvas = document.getElementById("cameraCanvas");
+    context = canvas.getContext("2d");
+    context.fillStyle = "#fff";
+    context.fillText('Loading...', canvas.width/2-30, canvas.height/3);
+
+    player = new jsmpeg(webSocket, {canvas:canvas});
+    
+    
+    
+    // *==== iOS Only ====*
+    
+    var userAgent = window.navigator.userAgent.toLowerCase();
+    var appVersion = window.navigator.appVersion.toLowerCase();
+    
+    window.addEventListener('devicemotion', function(evt){   
+        var data = {type:"accel", data:{
+           acceleration:evt.acceleration,
+           accelerationIncludingGravity:evt.accelerationIncludingGravity,
+           interval:evt.interval,
+           rotationRate:evt.rotationRate,
+        } };
+        var json = JSON.stringify(data);
+        
+        $("#output").text(json);
+        
+        /*
+        var v = evt.accelerationIncludingGravity;
+        var nv = [v.x,v.y,v.z];
+        var len = numeric.norm2(nv);
+        var nv2 = numeric['/'](nv,len);
+        for (var i = 0; i < 3; i++) {
+           nv2[i] = Math.floor(nv2[i]*1000)/1000;	
+        }
+        var degXy = Math.atan2(nv2[0], nv2[1])/Math.PI * 180 - 90;
+        var degXz = Math.atan2(nv2[0], nv2[2])/Math.PI * 180 - 90;
+
+        var test = {
+           degXy:degXy,
+           degXz:degXz,
+        };
+        $("#output2").text(JSON.stringify(test));
+
+        var data = {type:"accel", data:{
+           deg:degXy,
+           deg:degXz,
+        } };
+        
+        if( webSocket.readyState==1)
+        {
+          webSocket.send(json);
+        }
+        */
+        
+    }, true); //加速度送信（≧∇≦）
+    
+    
+}(jQuery));
+</script>
+</body>
+</html>
