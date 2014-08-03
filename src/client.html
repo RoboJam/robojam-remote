@@ -6,10 +6,10 @@
 <body>
 <section class="mainSection">
   <section class="inputSection">
-    <input type="button" id="forwardButton" data-direction="f" value="&uarr;">
-    <input type="button" id="leftButton" data-direction="l" value="&larr;">
-    <input type="button" id="rightButton" data-direction="r" value="&rarr;">
-    <input type="button" id="backButton" data-direction="b" value="&darr;">
+    <input type="button" class="directionButton" data-direction="ffff" value="&uarr;">
+    <input type="button" class="directionButton" data-direction="llll" value="&larr;">
+    <input type="button" class="directionButton" data-direction="rrrr" value="&rarr;">
+    <input type="button" class="directionButton" data-direction="bbbb" value="&darr;">
   </section>
   <section class="cameraSection">
     <canvas id="cameraCanvas" width="320" height="240">
@@ -20,16 +20,16 @@
 <script type="text/javascript" src="jsmpg.js"></script>
 <script>
 (function($) {
-    var webSocket;
+    var HOST = "ws://" + location.host;
     var canvas;
     var context;
     var player;
 
-    webSocket = new WebSocket("ws://raspberrypi.local:8080");
-    $(".directionButton").on('click', function() {
+    commandSocket = new WebSocket(HOST, "command");
+    $(".directionButton").on("click", function() {
         var data = $(this).data();
-        if(webSocket.readyState == 1) {
-            webSocket.send(JSON.stringify(data));
+        if(commandSocket.readyState == 1) {
+            commandSocket.send(JSON.stringify(data));
         }
     });
 
@@ -38,7 +38,7 @@
     context.fillStyle = "#fff";
     context.fillText('Loading...', canvas.width/2-30, canvas.height/3);
 
-    player = new jsmpeg(webSocket, {canvas:canvas});
+    player = new jsmpeg(new WebSocket(HOST, "camera"), {canvas:canvas});
 }(jQuery));
 </script>
 </body>

@@ -1,6 +1,29 @@
 /* robojam 2014-07-21 */
 
 var RJ = RJ || {};
+(function() {
+    RJ.WIDTH = 320;
+    RJ.HEIGHT = 240;
+
+    var VIDEO_PARAMS = [
+        "-f", "video4linux2",
+        "-s", "" + RJ.WIDTH + "x" + RJ.HEIGHT,
+        "-vsync", "vfr",
+        "-b", "800k",
+        "-r", "30",
+        "-i", "/dev/video0",
+        "-f", "mpeg1video",
+        "-"
+    ];
+    RJ.startVideo = function(onData, onError) {
+        var ffmpeg;
+        ffmpeg = require("child_process").spawn("avconv", VIDEO_PARAMS);
+        ffmpeg.stdout.on("data", function(data) {onData(data);});
+        ffmpeg.stderr.setEncoding("utf8");
+        ffmpeg.stderr.on("data", function(data) {onError(data);});
+    };
+})();
+
 (function(){
     "use strict";
 
@@ -16,8 +39,6 @@ var RJ = RJ || {};
     var CLIENT_PAGE = "client.html";
     var JSMPG = "jsmpg.js";
     var STREAM_MAGIC_BYTES = "jsmp"; 
-    var WIDTH = 320;
-    var HEIGHT = 240;
 
     var SERIAL_PARAMS = {
         baudRate: 115200,
@@ -26,16 +47,6 @@ var RJ = RJ || {};
     	stopBits: 1,
     	flowControl: false
     };
-
-    var VIDEO_PARAMS = [
-        "-f", "video4linux2",
-        "-s", "" + WIDTH + "x" + HEIGHT,
-        "-b", "800k",
-        "-r", "30",
-        "-i", "/dev/video0",
-        "-f", "mpeg1video",
-        "-"
-    ];
 
     var port;
     var plainHttpServer;
@@ -48,8 +59,7 @@ var RJ = RJ || {};
     var onConnection;
     var onSerialData;
 
-    var ffmpeg = require("child_process").spawn("avconv", VIDEO_PARAMS);
-    ffmpeg.stdout.on("data", function(data) {
+    RJ.startVideo(function(data) {
         var clients;
         var client;
         var id;
@@ -60,14 +70,16 @@ var RJ = RJ || {};
         for(id in allClients) {
             client = allClients[id];
             if (client.connected) {
+                try {
                 client.sendBytes(data);
+                } catch(e) {
+                    log("send error:" + e);
+                }
             }
         }
-    });
-    ffmpeg.stderr.setEncoding("utf8");
-    ffmpeg.stderr.on("data", function(data) {
+    }, function(data) {
+        log("video error:" + data);
         if(/^execvp\(\)/.test(data)) {
-            log("failed to start ffmpeg");
             process.exit(1);
         }
     });
@@ -85,7 +97,7 @@ var RJ = RJ || {};
     /* WebSocket handlers */
     onMessage = function(message) {
         var data = JSON.parse(message.utf8Data);
-        log(data.direction);
+        log("receive command:" + data.direction);
         port.write(data.direction, function(error, results) {
             if(error) {
                 log("write error:" + error);
@@ -106,7 +118,7 @@ var RJ = RJ || {};
         /* startup server after opened serial port */
         log("open serialport!");
     });
-    port.on("data", onSerialData);
+    /* port.on("data", onSerialData); */
 
     /* HTTP server for static files. */
     plainHttpServer = http.createServer(function(req, res) {
@@ -131,28 +143,43 @@ var RJ = RJ || {};
         log("Server is listening on port " + PORT);
     });
 
-    wsServer = new WebSocketServer({httpServer: plainHttpServer});
-    wsServer.on("request", function(request) {
-        var connection, streamHeader;
-        log("request " + request.origin);
-        connection = request.accept(null, request.origin);
+    var initializeCameraClient = function(request) {
+        var streamHeader, connection;
 
+        connection = request.accept("camera", request.origin);
+        log("Command socket accepted. Peer " + connection.remoteAddress);
 	connection.id = ++lastClientId;
 	allClients[connection.id] = connection;
 
         streamHeader = new Buffer(8);
         streamHeader.write(STREAM_MAGIC_BYTES);
-        streamHeader.writeUInt16BE(WIDTH, 4);
-        streamHeader.writeUInt16BE(HEIGHT, 6);
+        streamHeader.writeUInt16BE(RJ.WIDTH, 4);
+        streamHeader.writeUInt16BE(RJ.HEIGHT, 6);
         connection.sendBytes(streamHeader);
 
-        log("Connection accepted. Peer " + connection.remoteAddress + " id:" + connection.id);
-
-        connection.on("message", onMessage); 
         connection.on("close", function(reasonCode, description) {
             delete allClients[connection.id];
             log("Peer " + connection.remoteAddress + " disconnected." + " id:" + connection.id);
         });
+    };
+
+    var initializeCommandClient = function(request) {
+        var connection;
+        connection = request.accept("command", request.origin);
+        connection.on("message", onMessage);
+    };
+
+    wsServer = new WebSocketServer({httpServer: plainHttpServer});
+    wsServer.on("request", function(request) {
+        var connection;
+        log("request " + request.origin + " protocols " + request.requestedProtocols);
+
+        if(request.requestedProtocols == "command") {
+            initializeCommandClient(request);
+        }
+        if(request.requestedProtocols == "camera") {
+            initializeCameraClient(request);
+        }
     });
 
 })();
