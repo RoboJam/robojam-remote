@@ -2,9 +2,19 @@
 
 var RJ = RJ || {};
 (function(){
+    "use strict";
+
+    var WebSocketServer = require("websocket").server;
+    var http = require("http");
+    var fs = require("fs");
+    var SerialPort = require("serialport").SerialPort;
+    var url = require("url");
+    var path = require("path");
+
     var PORT = 8080;
     var SERIAL_PORT = "/dev/ttyACM0";
-    var CONTEXT_ROOT = "./";
+    var CLIENT_PAGE = "client.html";
+    var JSMPG = "jsmpg.js";
     var STREAM_MAGIC_BYTES = "jsmp"; 
     var WIDTH = 320;
     var HEIGHT = 240;
@@ -24,38 +34,33 @@ var RJ = RJ || {};
         "-r", "30",
         "-i", "/dev/video0",
         "-f", "mpeg1video",
-        "pipe:1"
+        "-"
     ];
 
-    var DATA_OPTS = {binary:true};
-
-    var WebSocketServer = require("websocket").server;
-    var http = require("http");
-    var fs = require("fs");
-    var SerialPort = require("serialport").SerialPort;
     var port;
     var plainHttpServer;
     var wsServer;
+    var lastClientId = 0;
+    var allClients = {};
 
     var log;
     var onMessage;
+    var onConnection;
     var onSerialData;
 
     var ffmpeg = require("child_process").spawn("avconv", VIDEO_PARAMS);
     ffmpeg.stdout.on("data", function(data) {
         var clients;
         var client;
-        var i;
-        if(wsServer) {
+        var id;
+        if(!wsServer) {
             return;
         }
 
-        clients = wsServer.clients;
-        for(i in clients ) {
-            client = clients[i];
-            if (client.readyState == 1) {
-                client.send(data, DATA_OPTS);
-                log("send data length:" + data.length);
+        for(id in allClients) {
+            client = allClients[id];
+            if (client.connected) {
+                client.sendBytes(data);
             }
         }
     });
@@ -78,13 +83,6 @@ var RJ = RJ || {};
     };
 
     /* WebSocket handlers */
-    onConnection = function(socket) {
-        var streamHeader = new Buffer(8);
-        streamHeader.write(STREAM_MAGIC_BYTES);
-        streamHeader.writeUInt16BE(width, 4);
-        streamHeader.writeUInt16BE(height, 6);
-        socket.send(streamHeader, DATA_OPTS);
-    };
     onMessage = function(message) {
         var data = JSON.parse(message.utf8Data);
         log(data.direction);
@@ -111,9 +109,22 @@ var RJ = RJ || {};
     port.on("data", onSerialData);
 
     /* HTTP server for static files. */
-    plainHttpServer = http.createServer( function(req, res) {
-        res.writeHead(200, {'Content-Type': 'text/html'});
-        res.end(fs.readFileSync(CLIENT_PAGE));
+    plainHttpServer = http.createServer(function(req, res) {
+        var pathname = url.parse(req.url, true).pathname;
+        if(pathname.length > 0 && pathname[0] == "/") {
+            pathname = pathname.substring(1, pathname.length);
+        }
+
+        if(pathname == "" || pathname == CLIENT_PAGE) {
+            res.writeHead(200, {'Content-Type': 'text/html'});
+            res.end(fs.readFileSync(CLIENT_PAGE));
+        } else if(pathname == JSMPG) {
+            res.writeHead(200, {'Content-Type': 'text/javascript'});
+            res.end(fs.readFileSync(JSMPG));
+        } else {
+            res.writeHead(404, {'Content-Type': 'text/html'});
+            res.end("404 file not found.");
+        }
     });
 
     plainHttpServer.listen(PORT, function() {
@@ -122,14 +133,25 @@ var RJ = RJ || {};
 
     wsServer = new WebSocketServer({httpServer: plainHttpServer});
     wsServer.on("request", function(request) {
-        var connection;
+        var connection, streamHeader;
         log("request " + request.origin);
         connection = request.accept(null, request.origin);
-        log("Connection accepted. Peer " + connection.remoteAddress);
+
+	connection.id = ++lastClientId;
+	allClients[connection.id] = connection;
+
+        streamHeader = new Buffer(8);
+        streamHeader.write(STREAM_MAGIC_BYTES);
+        streamHeader.writeUInt16BE(WIDTH, 4);
+        streamHeader.writeUInt16BE(HEIGHT, 6);
+        connection.sendBytes(streamHeader);
+
+        log("Connection accepted. Peer " + connection.remoteAddress + " id:" + connection.id);
 
         connection.on("message", onMessage); 
         connection.on("close", function(reasonCode, description) {
-            log("Peer " + connection.remoteAddress + " disconnected.");
+            delete allClients[connection.id];
+            log("Peer " + connection.remoteAddress + " disconnected." + " id:" + connection.id);
         });
     });
 
