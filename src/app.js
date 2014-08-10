@@ -10,7 +10,6 @@ var RJ = RJ || {};
         "-s", "" + RJ.WIDTH + "x" + RJ.HEIGHT,
         "-vsync", "vfr",
         "-b", "800k",
-        "-r", "30",
         "-i", "/dev/video0",
         "-f", "mpeg1video",
         "-"
