@@ -2,6 +2,30 @@
 <html>
 <head>
     <meta charset="utf-8">
+    <link rel="stylesheet" type="text/css" href="client.css">
+    <style type="text/css">
+      .output{
+          background-color: aqua;
+      }
+      .accGraph{
+          background-color: aqua;
+      }
+      .accGraph .bar{
+        height: 1em;
+        border-style: solid;
+        border-width: 1px;
+        background-color: yellow;
+      };
+      .accGraph .barX{
+        background-color: red;
+      };
+      .accGraph .barY{
+        background-color: blue;
+      };
+      .accGraph .barZ{
+        background-color: green;
+      };
+    </style>
 </head>
 <body>
 <section class="mainSection">
@@ -15,8 +39,23 @@
     <canvas id="cameraCanvas" width="320" height="240">
   </section>
   <section>
-    <div id="output"></div>
+    <input type="button" id="zeroResetButton" value="ZeroReset">
+
+    <div class="output" id="output"></div>
     <div id="output2"></div>
+
+    <div class="accGraph" id="accGraph">
+        <div class="bar barX" id="accelerationX">accX</div>
+        <div class="bar barY" id="accelerationY">accY</div>
+        <div class="bar barZ" id="accelerationZ">accZ</div>
+
+        <div class="bar barX" id="accelerationIncludingGravityX">accGravityX</div>
+        <div class="bar barY" id="accelerationIncludingGravityY">accGravityY</div>
+        <div class="bar barZ" id="accelerationIncludingGravityZ">accGravityZ</div>
+        <p>コントロール</p>
+        <div class="cmd" id="controlCmd"></div>
+        <div class="cmd" id="controlCmdLog"></div>
+    </div>
   </section>
 <section>
 
@@ -59,45 +98,76 @@
     var userAgent = window.navigator.userAgent.toLowerCase();
     var appVersion = window.navigator.appVersion.toLowerCase();
     
-    window.addEventListener('devicemotion', function(evt){   
-        var data = {type:"accel", data:{
-           acceleration:evt.acceleration,
-           accelerationIncludingGravity:evt.accelerationIncludingGravity,
+    var continueData = {
+        zeroOffset:{
+          gravityX:0,
+          gravityY:0,
+          gravityZ:0,
+        },
+        lastAccData:null,
+    };
+    $("#zeroResetButton").on('click', function() {
+        if(continueData.lastAccData)
+        {
+          continueData.zeroOffset.gravityX = continueData.lastAccData.accelerationIncludingGravity.x;
+          continueData.zeroOffset.gravityY = continueData.lastAccData.accelerationIncludingGravity.y;
+          continueData.zeroOffset.gravityZ = continueData.lastAccData.accelerationIncludingGravity.z;
+        }
+    });
+    window.addEventListener('devicemotion', function(evt){
+        var floatRound = function(val,scale){
+           return Math.round(val * scale)/scale;
+        };
+
+        var accData = {
+           acceleration:{
+             x:floatRound(evt.acceleration.x,100),
+             y:floatRound(evt.acceleration.y,100),
+             z:floatRound(evt.acceleration.z,100),
+           },
+           accelerationIncludingGravity:{
+             x:floatRound(evt.accelerationIncludingGravity.x,100),
+             y:floatRound(evt.accelerationIncludingGravity.y,100),
+             z:floatRound(evt.accelerationIncludingGravity.z,100),
+           },
            interval:evt.interval,
            rotationRate:evt.rotationRate,
-        } };
-        var json = JSON.stringify(data);
-        
-        $("#output").text(json);
-        
-        /*
-        var v = evt.accelerationIncludingGravity;
-        var nv = [v.x,v.y,v.z];
-        var len = numeric.norm2(nv);
-        var nv2 = numeric['/'](nv,len);
-        for (var i = 0; i < 3; i++) {
-           nv2[i] = Math.floor(nv2[i]*1000)/1000;	
-        }
-        var degXy = Math.atan2(nv2[0], nv2[1])/Math.PI * 180 - 90;
-        var degXz = Math.atan2(nv2[0], nv2[2])/Math.PI * 180 - 90;
-
-        var test = {
-           degXy:degXy,
-           degXz:degXz,
+           timestamp: evt.timeStamp,
         };
-        $("#output2").text(JSON.stringify(test));
-
-        var data = {type:"accel", data:{
-           deg:degXy,
-           deg:degXz,
-        } };
         
+        continueData.lastAccData = accData;
+        
+        $("#output").text(JSON.stringify(accData));
+        
+        $("#accelerationX").width(((accData.acceleration.x||0)*50 +400)+"px");
+        $("#accelerationY").width(((accData.acceleration.y||0)*50 +400)+"px");
+        $("#accelerationZ").width(((accData.acceleration.z||0)*50 +400)+"px");
+        $("#accelerationIncludingGravityX").width(((accData.accelerationIncludingGravity.x||0)*10+400)+"px");
+        $("#accelerationIncludingGravityY").width(((accData.accelerationIncludingGravity.y||0)*10+400)+"px");
+        $("#accelerationIncludingGravityZ").width(((accData.accelerationIncludingGravity.z||0)*10+400)+"px");
+        
+        var cmd = "";
+        //前後用
+        var moveFB = accData.accelerationIncludingGravity.y - continueData.zeroOffset.gravityY;
+        //回転用
+        var moveRot = accData.accelerationIncludingGravity.x - continueData.zeroOffset.gravityX;
+        if(Math.abs(moveRot) > 2){
+           cmd = moveRot > 0 ? "r" : "l";
+        }
+        else if(Math.abs(moveFB) > 2){
+           cmd = moveFB > 0 ? "f" : "b";
+        }
+        $("#controlCmd").text(cmd);
+        $("#controlCmdLog").text(cmd + $("#controlCmdLog").text());
+        
+        var sendData = {
+           direction:cmd,
+        };
         if( webSocket.readyState==1)
         {
-          webSocket.send(json);
+            $("#output2").text(JSON.stringify(sendData));
+            webSocket.send(JSON.stringify(sendData));
         }
-        */
-        
     }, true); //加速度送信（≧∇≦）
     
     
