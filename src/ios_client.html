@@ -71,16 +71,16 @@
 <script type="text/javascript" src="numeric-1.2.6.js"></script>
 <script>
 (function($) {
-    var webSocket;
+    var HOST = "ws://" + location.host;
     var canvas;
     var context;
     var player;
 
-    webSocket = new WebSocket("ws://raspberrypi.local:8080");
-    $(".directionButton").on('click', function() {
+    commandSocket = new WebSocket(HOST, "command");
+    $(".directionButton").on("click", function() {
         var data = $(this).data();
-        if(webSocket.readyState == 1) {
-            webSocket.send(JSON.stringify(data));
+        if(commandSocket.readyState == 1) {
+            commandSocket.send(JSON.stringify(data));
         }
     });
 
@@ -89,7 +89,7 @@
     context.fillStyle = "#fff";
     context.fillText('Loading...', canvas.width/2-30, canvas.height/3);
 
-    player = new jsmpeg(webSocket, {canvas:canvas});
+    player = new jsmpeg(new WebSocket(HOST, "camera"), {canvas:canvas});
     
     
     
@@ -163,10 +163,10 @@
         var sendData = {
            direction:cmd,
         };
-        if( webSocket.readyState==1)
+        if( commandSocket.readyState==1)
         {
             $("#output2").text(JSON.stringify(sendData));
-            webSocket.send(JSON.stringify(sendData));
+            commandSocket.send(JSON.stringify(sendData));
         }
     }, true); //加速度送信（≧∇≦）
     
