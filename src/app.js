@@ -130,9 +130,15 @@ var RJ = RJ || {};
         if(pathname == "" || pathname == CLIENT_PAGE) {
             res.writeHead(200, {'Content-Type': 'text/html'});
             res.end(fs.readFileSync(CLIENT_PAGE));
-        } else if(pathname == "" || pathname == IOS_CLIENT_PAGE) {
+        } else if(pathname == IOS_CLIENT_PAGE) {
             res.writeHead(200, {'Content-Type': 'text/html'});
             res.end(fs.readFileSync(IOS_CLIENT_PAGE));
+        } else if(pathname == "client.css") {
+            res.writeHead(200, {'Content-Type': 'text/html'});
+            res.end(fs.readFileSync("client.css"));
+        } else if(pathname == "numeric-1.2.6.js") {
+            res.writeHead(200, {'Content-Type': 'text/html'});
+            res.end(fs.readFileSync("numeric-1.2.6.js"));
         } else if(pathname == JSMPG) {
             res.writeHead(200, {'Content-Type': 'text/javascript'});
             res.end(fs.readFileSync(JSMPG));
