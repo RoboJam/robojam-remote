@@ -4,6 +4,10 @@
     <meta charset="utf-8">
     <link rel="stylesheet" type="text/css" href="client.css">
     <style type="text/css">
+      .directionButton{
+          width: 4em;
+          height: 4em;
+      } 
       .output{
           background-color: aqua;
       }
@@ -30,10 +34,12 @@
 <body>
 <section class="mainSection">
   <section class="inputSection">
-    <input type="button" id="forwardButton" data-direction="f" value="&uarr;">
-    <input type="button" id="leftButton" data-direction="l" value="&larr;">
-    <input type="button" id="rightButton" data-direction="r" value="&rarr;">
-    <input type="button" id="backButton" data-direction="b" value="&darr;">
+    <input type="button" class="directionButton" id="forwardButton" data-direction="f" value="&uarr;" style="margin-left:4em">
+    <br/>
+    <input type="button" class="directionButton" id="leftButton" data-direction="l" value="&larr;">
+    <input type="button" class="directionButton" id="rightButton" data-direction="r" value="&rarr;"style="margin-left:4em">
+    <br/>
+    <input type="button" class="directionButton" id="backButton" data-direction="b" value="&darr;" style="margin-left:4em">
   </section>
   <section class="cameraSection">
     <canvas id="cameraCanvas" width="320" height="240">
