@@ -152,10 +152,12 @@
         //回転用
         var moveRot = accData.accelerationIncludingGravity.x - continueData.zeroOffset.gravityX;
         if(Math.abs(moveRot) > 2){
-           cmd = moveRot > 0 ? "r" : "l";
+           //cmd = moveRot > 0 ? "r" : "l";
+           cmd = moveRot > 0 ? "1" : "2";
         }
         else if(Math.abs(moveFB) > 2){
-           cmd = moveFB > 0 ? "f" : "b";
+           //cmd = moveFB > 0 ? "f" : "b";
+           cmd = moveFB > 0 ? "3" : "4";
         }
         $("#controlCmd").text(cmd);
         $("#controlCmdLog").text(cmd + $("#controlCmdLog").text());
