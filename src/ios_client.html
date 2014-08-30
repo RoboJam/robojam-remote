@@ -140,7 +140,12 @@
            rotationRate:evt.rotationRate,
            timestamp: evt.timeStamp,
         };
-        
+        if(!continueData.lastAccData)
+        {
+            continueData.zeroOffset.gravityX = accData.accelerationIncludingGravity.x;
+            continueData.zeroOffset.gravityY = accData.accelerationIncludingGravity.y;
+            continueData.zeroOffset.gravityZ = accData.accelerationIncludingGravity.z;
+        }
         continueData.lastAccData = accData;
         
         $("#output").text(JSON.stringify(accData));
