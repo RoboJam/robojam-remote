@@ -5,11 +5,11 @@ using System.Collections.Generic;
 public class TestMeshScript : MonoBehaviour {
 
     protected const int MAX_PLATE_SIZE_X  = 210 / 5;//210mmがタミヤが販売している最大サイズです
-    protected const int MAX_PLATE_SIZE_Y  = 210 / 5;//210mmがタミヤが販売している最大サイズです
-    protected const int DIV_DRAW_LIMIT_XY = 210 / 5;
+    protected const int MAX_PLATE_SIZE_Z  = 210 / 5;//210mmがタミヤが販売している最大サイズです
+    protected const int DIV_DRAW_SIZE_XZ  = 16; //Mesh頂点数の限界(65536個)を鑑みた分割サイズ(平均64頂点 per 1/4Parts 程度で想定)
 
     /// <summary>
-    /// 1/4 サイズのパーツデータ
+    /// 1/4 サイズ(1/2x1/2)のパーツデータ
     /// </summary>
     /// <remarks>
     /// この単位を扱うデータの最小単位とします
@@ -40,18 +40,18 @@ public class TestMeshScript : MonoBehaviour {
     }
     protected class PlateDrawObject
     {
-        PlateDrawObject()
+        public PlateDrawObject()
         {
             gameobject = new GameObject();
             gameobject.AddComponent<MeshFilter>();
             gameobject.AddComponent<MeshRenderer>();
         }
-        GameObject gameobject;
-        Mesh       mesh;
+        public GameObject gameobject;
+        public Mesh       mesh;
     }
 
-    protected QuarterInfo_[,]   plateBuildMap_;
-    protected PlateDrawObject[] plateDrawObject_ = new PlateDrawObject[4];
+    protected QuarterInfo_[,]    plateBuildMap_;
+    protected PlateDrawObject[,] plateDrawObjects_;
 
     #region mesh サポート
     void SetRectangleVtx_(int[] triangles,int startTriIdx, int v0, int v1, int v2, int v3)
@@ -182,10 +182,10 @@ public class TestMeshScript : MonoBehaviour {
     /// <param name="plateSizeX">5mm(穴１個相当)を１単位としたXサイズを指定します</param>
     /// <param name="plateSizeY">5mm(穴１個相当)を１単位としたYサイズを指定します</param>
     /// <remarks>販売されている2.5mmの余白が付いたプレートを生成します</remarks>
-    protected void BuildMap_BasicPlate_(int plateSizeX, int plateSizeY)
+    protected void BuildMap_BasicPlate_(int plateSizeX, int plateSizeZ)
     {
-        int plateQSizeX = plateSizeX * 2;
-        int plateQSizeZ = plateSizeY * 2;
+        int plateQSizeX = Mathf.Min(plateSizeX, MAX_PLATE_SIZE_X) * 2;
+        int plateQSizeZ = Mathf.Min(plateSizeZ, MAX_PLATE_SIZE_Z) * 2;
 
         var hole4x4DirMap = new QuarterInfo_.RotateDirs[2, 2]{
             {QuarterInfo_.RotateDirs.DEG_0,  QuarterInfo_.RotateDirs.DEG_270,},
@@ -219,49 +219,80 @@ public class TestMeshScript : MonoBehaviour {
                 }
             }
         }
-        
+    }
 
+    protected void RebuildDrawObject_()
+    {
+        // 1/4パーツ合成用の格納場所を準備します
+        var combineInsLsts = new List<CombineInstance>[plateDrawObjects_.GetLength(0),plateDrawObjects_.GetLength(1)];
+        {
+            for (int zz = 0; zz < plateDrawObjects_.GetLength(0); zz++)
+            {
+                for (int xx = 0; xx < plateDrawObjects_.GetLength(1); xx++)
+                {
+                    combineInsLsts[zz, xx] = new List<CombineInstance>();
+                }
+            }
+        }
+        // 1/4パーツのメッシュの生成
+        for (int zzQ = 0; zzQ < plateBuildMap_.GetLength(0); zzQ++)
+        {
+            for (int xxQ = 0; xxQ < plateBuildMap_.GetLength(1); xxQ++)
+            {
+                var combineInsLst = combineInsLsts[zzQ / (DIV_DRAW_SIZE_XZ * 2), xxQ / (DIV_DRAW_SIZE_XZ * 2)];
+
+                var qinfo = plateBuildMap_[zzQ,xxQ];
+
+                var mtx = Matrix4x4.TRS(new Vector3(-2.5f/2, 0, -2.5f/2), Quaternion.identity, Vector3.one);
+                mtx = Matrix4x4.TRS(new Vector3(xxQ * 2.5f, 0, zzQ * 2.5f), Quaternion.Euler(0, (int)qinfo.RotateDir * 90, 0), Vector3.one) * mtx;
+
+                combineInsLst.Add(new CombineInstance()
+                {
+                    mesh = CreateQuarterBlock_Hole(),
+                    transform = mtx,
+                });
+            }
+        }
+        // プレートのメッシュの構築
+        for (int zz = 0; zz < plateDrawObjects_.GetLength(0); zz++)
+        {
+            for (int xx = 0; xx < plateDrawObjects_.GetLength(1); xx++)
+            {
+                var combineInsLst   = combineInsLsts[zz, xx];
+                var plateDrawObject = plateDrawObjects_[zz, xx];
+
+                plateDrawObject.mesh = new Mesh();
+                plateDrawObject.mesh.CombineMeshes(combineInsLst.ToArray());
+                plateDrawObject.gameobject.GetComponent<MeshFilter>().sharedMesh      = plateDrawObject.mesh;
+                plateDrawObject.gameobject.GetComponent<MeshFilter>().sharedMesh.name = string.Format("plateMesh_{0}_{0}", zz, xx);
+                plateDrawObject.gameobject.GetComponent<MeshRenderer>().material = GetComponent<MeshRenderer>().material;
+            }
+        }
     }
 
     // Use this for initialization
     void Start()
     {
+        // 表示物を入れるゲームオブジェクトなどを生成します
+        plateDrawObjects_= new PlateDrawObject[(MAX_PLATE_SIZE_Z + DIV_DRAW_SIZE_XZ-1) / DIV_DRAW_SIZE_XZ,
+                                               (MAX_PLATE_SIZE_X + DIV_DRAW_SIZE_XZ-1) / DIV_DRAW_SIZE_XZ];
+        for (int zz = 0; zz < plateDrawObjects_.GetLength(0); zz++)
+        {
+            for (int xx = 0; xx < plateDrawObjects_.GetLength(1); xx++)
+            {
+                var drawObj = new PlateDrawObject();
+                {
+                    drawObj.gameobject.transform.parent = this.gameObject.transform;
+                }
+                plateDrawObjects_[zz, xx] = drawObj;
+            }
+        }
+
+        //
         BuildMap_BasicPlate_(12,32);
 
-        {
-            plateMesh_ = new Mesh();
-            var combineInsLst = new List<CombineInstance>();
-            for (int zz = 0; zz < plateBuildMap_.GetLength(0); zz++)
-            {
-                for (int xx = 0; xx < plateBuildMap_.GetLength(1); xx++)
-                {
-                    var qinfo = plateBuildMap_[zz,xx];
-
-                    var mtx = Matrix4x4.TRS(new Vector3(-2.5f/2, 0, -2.5f/2), Quaternion.identity, Vector3.one);
-                    mtx = Matrix4x4.TRS(new Vector3(xx * 2.5f, 0, zz * 2.5f), Quaternion.Euler(0, (int)qinfo.RotateDir * 90, 0), Vector3.one) * mtx;
-
-                    //Debug.Log(string.Format("{0} {1} {2} {3}", qinfo.RotateDir, qinfo.BlockType, xx * 2.5f, 0, zz * 2.5f));
-                    
-                    combineInsLst.Add(new CombineInstance()
-                    {
-                        mesh = CreateQuarterBlock_Hole(),
-                        transform = mtx,
-                    });
-                }
-            }
-
-            int vNum = 0;
-            foreach (var c in combineInsLst)
-            {
-                vNum += c.mesh.vertexCount;
-            }
-            Debug.Log(string.Format("vNum={0} {1}", vNum, plateBuildMap_.GetLength(0) * plateBuildMap_.GetLength(1)));
-
-
-            plateMesh_.CombineMeshes(combineInsLst.ToArray());
-            GetComponent<MeshFilter>().sharedMesh = plateMesh_;
-            GetComponent<MeshFilter>().sharedMesh.name = "myMesh";
-        }
+        //
+        RebuildDrawObject_();
     }
 	
 	// Update is called once per frame
