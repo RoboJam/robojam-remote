@@ -175,6 +175,73 @@ public class TestMeshScript : MonoBehaviour {
     }
     #endregion
 
+    #region CreateQuarterBlock_Margin()
+    Mesh CreateQuarterBlock_Margin()
+    {
+        const float SIZE_XZ = 2.5f;
+        const float SIZE_Y  = 3;
+
+        var mesh = new Mesh();
+
+        var vertices = new Vector3[4*6];
+        var triangles = new int[6*3*2];
+
+        //MEMO: UnityのMESHは頂点法線を別インデックスとしては持てないみたいなので頂点多めに…
+
+        //底面
+        vertices[0] = new Vector3(0, 0, 0);
+        vertices[1] = new Vector3(SIZE_XZ, 0, 0);
+        vertices[2] = new Vector3(SIZE_XZ, 0, SIZE_XZ);
+        vertices[3] = new Vector3(0, 0, SIZE_XZ);
+
+        //上面
+        vertices[4 + 0] = new Vector3(0, SIZE_Y, 0);
+        vertices[4 + 1] = new Vector3(SIZE_XZ, SIZE_Y, 0);
+        vertices[4 + 2] = new Vector3(SIZE_XZ, SIZE_Y, SIZE_XZ);
+        vertices[4 + 3] = new Vector3(0, SIZE_Y, SIZE_XZ);
+
+        // 側面1
+        vertices[8 + 0] = vertices[0];
+        vertices[8 + 1] = vertices[1];
+        vertices[8 + 2] = vertices[4 + 1];
+        vertices[8 + 3] = vertices[4 + 0];
+
+        // 側面2
+        vertices[12 + 0] = vertices[1];
+        vertices[12 + 1] = vertices[2];
+        vertices[12 + 2] = vertices[4 + 2];
+        vertices[12 + 3] = vertices[4 + 1];
+
+        // 側面3
+        vertices[16 + 0] = vertices[2];
+        vertices[16 + 1] = vertices[3];
+        vertices[16 + 2] = vertices[4 + 3];
+        vertices[16 + 3] = vertices[4 + 2];
+
+        // 側面4
+        vertices[20 + 0] = vertices[3];
+        vertices[20 + 1] = vertices[0];
+        vertices[20 + 2] = vertices[4 + 0];
+        vertices[20 + 3] = vertices[4 + 3];
+
+        // 面
+        SetRectangleVtx_(triangles, 0,  0,  1,  2,  3);
+        SetRectangleVtx_(triangles, 2,  7,  6,  5,  4);
+        SetRectangleVtx_(triangles, 4, 11, 10,  9,  8);
+        SetRectangleVtx_(triangles, 6, 15, 14, 13, 12 );
+        SetRectangleVtx_(triangles, 8, 19, 18, 17, 16);
+        SetRectangleVtx_(triangles,10, 23, 22, 21, 20);
+        
+        mesh.vertices = vertices;
+        mesh.triangles = triangles;
+
+        mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
+
+        return mesh;
+
+    }
+    #endregion
 
     /// <summary>
     /// 基本プレートを構築します
@@ -215,7 +282,6 @@ public class TestMeshScript : MonoBehaviour {
                         BlockType = QuarterInfo_.BlockTypes.Hole,
                         RotateDir = hole4x4DirMap[(zz + 1) % 2, (xx + 1) % 2],
                     };
-                    Debug.Log(plateBuildMap_[zz, xx].BlockType.ToString());
                 }
             }
         }
@@ -241,14 +307,25 @@ public class TestMeshScript : MonoBehaviour {
             {
                 var combineInsLst = combineInsLsts[zzQ / (DIV_DRAW_SIZE_XZ * 2), xxQ / (DIV_DRAW_SIZE_XZ * 2)];
 
-                var qinfo = plateBuildMap_[zzQ,xxQ];
+                var qinfo = plateBuildMap_[zzQ, xxQ];
 
-                var mtx = Matrix4x4.TRS(new Vector3(-2.5f/2, 0, -2.5f/2), Quaternion.identity, Vector3.one);
-                mtx = Matrix4x4.TRS(new Vector3(xxQ * 2.5f, 0, zzQ * 2.5f), Quaternion.Euler(0, (int)qinfo.RotateDir * 90, 0), Vector3.one) * mtx;
-
+                Matrix4x4 mtx;
+                {
+                    mtx = Matrix4x4.TRS(new Vector3(-2.5f / 2, 0, -2.5f / 2), Quaternion.identity, Vector3.one);
+                    mtx = Matrix4x4.TRS(new Vector3(xxQ * 2.5f, 0, zzQ * 2.5f), Quaternion.Euler(0, (int)qinfo.RotateDir * 90, 0), Vector3.one) * mtx;
+                }
+                Mesh mesh = null;
+                {
+                    switch (qinfo.BlockType)
+                    {
+                        case QuarterInfo_.BlockTypes.Margin: mesh = CreateQuarterBlock_Margin(); break;
+                        case QuarterInfo_.BlockTypes.Hole: mesh = CreateQuarterBlock_Hole(); break;
+                    }
+                }
+                
                 combineInsLst.Add(new CombineInstance()
                 {
-                    mesh = CreateQuarterBlock_Hole(),
+                    mesh = mesh,
                     transform = mtx,
                 });
             }
@@ -290,6 +367,7 @@ public class TestMeshScript : MonoBehaviour {
 
         //
         BuildMap_BasicPlate_(12,32);
+        //BuildMap_BasicPlate_(4,4);
 
         //
         RebuildDrawObject_();
