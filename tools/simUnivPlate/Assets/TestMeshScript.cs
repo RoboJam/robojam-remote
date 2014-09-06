@@ -45,6 +45,7 @@ public class TestMeshScript : MonoBehaviour {
             gameobject = new GameObject();
             gameobject.AddComponent<MeshFilter>();
             gameobject.AddComponent<MeshRenderer>();
+            gameobject.AddComponent<BoxCollider>();
         }
         public GameObject gameobject;
         public Mesh       mesh;
@@ -343,6 +344,8 @@ public class TestMeshScript : MonoBehaviour {
                 plateDrawObject.gameobject.GetComponent<MeshFilter>().sharedMesh      = plateDrawObject.mesh;
                 plateDrawObject.gameobject.GetComponent<MeshFilter>().sharedMesh.name = string.Format("plateMesh_{0}_{0}", zz, xx);
                 plateDrawObject.gameobject.GetComponent<MeshRenderer>().material = GetComponent<MeshRenderer>().material;
+                plateDrawObject.gameobject.GetComponent<BoxCollider>().size = plateDrawObject.mesh.bounds.size;
+                plateDrawObject.gameobject.GetComponent<BoxCollider>().center = plateDrawObject.mesh.bounds.center;
             }
         }
     }
