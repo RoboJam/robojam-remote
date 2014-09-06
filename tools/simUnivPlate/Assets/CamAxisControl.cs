@@ -134,13 +134,13 @@ public class CamAxisControl : MonoBehaviour
                 }
             }
             else if (Input.GetMouseButtonDown((int)MouseButtonDown.MBD_LEFT))
-            {
+            {/*
                 var ray = Camera.main.ScreenPointToRay(Input.mousePosition);
                 var hitInfo = new RaycastHit();
                 if (Physics.Raycast(ray, out hitInfo))
                 {
                     this.transform.LookAt(hitInfo.collider.transform);
-                }                
+                }*/                
             }
             else
 		    {
