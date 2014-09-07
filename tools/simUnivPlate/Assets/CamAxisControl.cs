@@ -12,20 +12,22 @@ public class CamAxisControl : MonoBehaviour
     public float UpDownSpeed = 0.01f;
  
 	void Start ()
-	{
+	{  
+        /*
 		if (this.focusObj == null)
 			this.setupFocusObject("CameraFocusObject");
-
+        
 		Transform trans = this.transform;
 		transform.parent = this.focusObj.transform;
 
 		trans.LookAt(this.focus);
-
-		return;
+        */
+        return;
 	}
 	
 	void Update ()
 	{
+        this.keyEvent();
 		this.mouseEvent();
         this.touchEvent();
 	}
@@ -55,6 +57,67 @@ public class CamAxisControl : MonoBehaviour
         }
     }
 
+    void keyEvent()
+    {
+        if(Input.GetKey(KeyCode.UpArrow)||
+           Input.GetKey(KeyCode.DownArrow)||
+           Input.GetKey(KeyCode.LeftArrow)||
+           Input.GetKey(KeyCode.RightArrow))
+        {
+            Vector3 moveV = new Vector3();
+            if(Input.GetKey(KeyCode.UpArrow)){
+                if (Input.GetKey(KeyCode.LeftShift)){
+                    moveV.y = 1f;
+                }
+                else{
+                    moveV.z = 1f;
+                }
+            }
+            if(Input.GetKey(KeyCode.DownArrow)){
+                if (Input.GetKey(KeyCode.LeftShift))
+                {
+                    moveV.y = -1f;
+                }
+                else
+                {
+                    moveV.z = -1f;
+                }
+            }
+            if(Input.GetKey(KeyCode.LeftArrow)){
+                if (Input.GetKey(KeyCode.LeftShift))
+                {
+                }
+                else
+                {
+                    moveV.x = -1f;
+                }
+            }
+            if(Input.GetKey(KeyCode.RightArrow)){
+                if (Input.GetKey(KeyCode.LeftShift))
+                {
+                }
+                else
+                {
+                    moveV.x = 1f;
+                }
+            }
+            moveV = transform.localToWorldMatrix * moveV;
+            if (Input.GetKey(KeyCode.LeftShift))
+            {
+                moveV.z = 0;
+            }
+            else
+            {
+                moveV.y = 0;
+            }
+            if (moveV.magnitude > Vector3.kEpsilon)
+            {
+                moveV.Normalize();
+                transform.position += moveV * 0.2f;
+            }
+        }
+    }
+
     #region mouseEvent() その他
 
     enum MouseButtonDown
@@ -68,9 +131,9 @@ public class CamAxisControl : MonoBehaviour
 
     void mouseEvent()
 	{
-		float delta = Input.GetAxis("Mouse ScrollWheel");
-		if (delta != 0.0f)
-			this.mouseWheelEvent(delta);
+//		float delta = Input.GetAxis("Mouse ScrollWheel");
+//		if (delta != 0.0f)
+//			this.mouseWheelEvent(delta);
 
 		if (Input.GetMouseButtonDown((int)MouseButtonDown.MBD_LEFT) ||
 			Input.GetMouseButtonDown((int)MouseButtonDown.MBD_MIDDLE) ||
@@ -88,52 +151,19 @@ public class CamAxisControl : MonoBehaviour
 
         if (Input.GetKey(KeyCode.LeftAlt))
         {
-            if(Input.GetKey(KeyCode.UpArrow)||
-               Input.GetKey(KeyCode.DownArrow)||
-               Input.GetKey(KeyCode.LeftArrow)||
-               Input.GetKey(KeyCode.RightArrow))
             {
-                Vector3 moveV = new Vector3();
-                if(Input.GetKey(KeyCode.UpArrow)){
-                    if (Input.GetKey(KeyCode.LeftShift)){
-                        moveV.y = 1f;
-                    }
-                    else{
-                        moveV.z = 1f;
-                    }
-                }
-                if(Input.GetKey(KeyCode.DownArrow)){
-                    if (Input.GetKey(KeyCode.LeftShift))
-                    {
-                        moveV.y = -1f;
-                    }
-                    else
-                    {
-                        moveV.z = -1f;
-                    }
-                }
-                if(Input.GetKey(KeyCode.LeftArrow)){
-                    moveV.x = -1f;
-                }
-                if(Input.GetKey(KeyCode.RightArrow)){
-                    moveV.x = 1f;
-                }
-                moveV = transform.localToWorldMatrix * moveV;
-                if (Input.GetKey(KeyCode.LeftShift))
+                if (Mathf.Abs(diff.x) > Vector3.kEpsilon)
                 {
-                    moveV.z = 0;
+                    this.transform.Rotate(0,diff.x,0);
                 }
-                else
+                if (Mathf.Abs(diff.y) > Vector3.kEpsilon)
                 {
-                    moveV.y = 0;
-                }
-                if (moveV.magnitude > Vector3.kEpsilon)
-                {
-                    moveV.Normalize();
-                    transform.position += moveV * 0.2f;
+                    this.transform.Rotate(diff.y,0,0);
                 }
             }
-            else if (Input.GetMouseButtonDown((int)MouseButtonDown.MBD_LEFT))
+
+            
+            if (Input.GetMouseButtonDown((int)MouseButtonDown.MBD_LEFT))
             {/*
                 var ray = Camera.main.ScreenPointToRay(Input.mousePosition);
                 var hitInfo = new RaycastHit();
@@ -143,7 +173,7 @@ public class CamAxisControl : MonoBehaviour
                 }*/                
             }
             else
-		    {
+		    {/*
                 if (Input.GetKey(KeyCode.LeftShift))
                 {
                     if (diff.magnitude > Vector3.kEpsilon)
@@ -153,7 +183,7 @@ public class CamAxisControl : MonoBehaviour
                 {
                     if (diff.magnitude > Vector3.kEpsilon)
                         this.cameraRotate(new Vector3(diff.y, diff.x, 0.0f));
-                }
+                }*/
 		    }
         }
 

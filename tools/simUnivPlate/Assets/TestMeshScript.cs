@@ -610,8 +610,8 @@ public class TestMeshScript : MonoBehaviour {
         this.gameObject.AddComponent<BoxCollider>();
         
         //
-        //BuildMap_BasicPlate_(12,32);
-        BuildMap_BasicPlate_(4,8);
+        BuildMap_BasicPlate_(12,32);
+        //BuildMap_BasicPlate_(4,8);
 
         //
         RebuildDrawPlateObject_();
@@ -622,9 +622,6 @@ public class TestMeshScript : MonoBehaviour {
 	
 	}
 
-
-    private Vector3 screenPoint;
-    private Vector3 offset;
 
     bool RaycastPlateXZ_(Ray ray,out Vector2 platePosXZ)
     {
@@ -661,6 +658,8 @@ public class TestMeshScript : MonoBehaviour {
 
     bool    bNowPlateDrag_;
     Vector2 lastPlateDragPos_;
+    Vector2 lastPlateDragPutPos_;
+    Vector2 lastPlateDragDiffV_;
 
     void OnMouseDown()
     {
@@ -668,6 +667,8 @@ public class TestMeshScript : MonoBehaviour {
         if (RaycastPlateXZ_(ray, out lastPlateDragPos_))
         {
             bNowPlateDrag_ = true;
+            lastPlateDragDiffV_ = new Vector2(0, 0);
+            lastPlateDragPutPos_ = new Vector2(lastPlateDragPos_.x, lastPlateDragPos_.y);
         }
     }
 
@@ -680,20 +681,51 @@ public class TestMeshScript : MonoBehaviour {
             if (RaycastPlateXZ_(ray, out platePosXZ))
             {
                 var diffV = platePosXZ - lastPlateDragPos_;
-                if (diffV.magnitude > 1.25f)
+                if (diffV.magnitude > QBLOCK_SIZE_XZ/2)
                 {
                     diffV.Normalize();
+                    //ある程度、縦横に方向がついていたら第一条件クリアです
                     if (Mathf.Abs(diffV.x) > 0.8f)
                     {
+                        // 前回と同じ方向ならば使用するラインをスナップします(違う方向を通さず直線を引く事は大抵意図と違うという想定）
+                        if (Mathf.Abs(lastPlateDragDiffV_.x) > 0.8f)
+                        {
+                            lastPlateDragPos_.y = lastPlateDragPutPos_.y;
+                            /*
+                            var drawNV = (lastPlateDragPos_ - lastPlateDragPutPos_);
+                            var drawLen = drawNV.magnitude;
+                            drawNV.Normalize();
+                            for (float len = 0; len < drawLen; len += QBLOCK_SIZE_XZ / 2)
+			                {
+                                cutting_.SetHoriLine_CutOperation_FromPlatePos(drawNV * len + lastPlateDragPutPos_, CuttingInfo_.CutOperations.Cut);
+			                }
+                           */
+                        }
                         cutting_.SetHoriLine_CutOperation_FromPlatePos(lastPlateDragPos_, CuttingInfo_.CutOperations.Cut);
                         cutting_.ReBuildDrawObject();
+                        lastPlateDragPutPos_ = lastPlateDragPos_;
                         lastPlateDragPos_ = platePosXZ;
+                        lastPlateDragDiffV_ = diffV;
                     }
                     else if (Mathf.Abs(diffV.y) > 0.8f)
                     {
+                        if (Mathf.Abs(lastPlateDragDiffV_.y) > 0.8f)
+                        {
+                            lastPlateDragPos_.x = lastPlateDragPutPos_.x;
+                            /*
+                            var drawNV = (lastPlateDragPos_ - lastPlateDragPutPos_);
+                            var drawLen = drawNV.magnitude;
+                            drawNV.Normalize();
+                            for (float len = 0; len < drawLen; len += QBLOCK_SIZE_XZ / 2)
+                            {
+                                cutting_.SetVertLine_CutOperation_FromPlatePos(drawNV * len + lastPlateDragPutPos_, CuttingInfo_.CutOperations.Cut);
+                            }*/
+                        }
                         cutting_.SetVertLine_CutOperation_FromPlatePos(lastPlateDragPos_, CuttingInfo_.CutOperations.Cut);
                         cutting_.ReBuildDrawObject();
+                        lastPlateDragPutPos_ = lastPlateDragPos_;
                         lastPlateDragPos_ = platePosXZ;
+                        lastPlateDragDiffV_ = diffV;
                     }
                 }
             }
