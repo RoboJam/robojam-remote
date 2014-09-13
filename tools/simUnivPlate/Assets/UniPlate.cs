@@ -216,6 +216,7 @@ public class UniPlate : MonoBehaviour {
                 const float MAX_Y =  3.1f;
                 var vertices  = new Vector3[4 * 2      *2 * drawList.Count];
                 var triangles = new int    [2 * 3 * 2  *2 * drawList.Count];
+                var uv = new Vector2[vertices.Length];
                 int baseIdx = 0;
                 foreach(var draw in drawList)
                 {
@@ -253,6 +254,7 @@ public class UniPlate : MonoBehaviour {
                 }
                 mesh.vertices = vertices;
                 mesh.triangles = triangles;
+                mesh.uv = uv;
                 mesh.RecalculateBounds();
                 mesh.RecalculateNormals();
             }
@@ -621,6 +623,137 @@ public class UniPlate : MonoBehaviour {
         this.transform.position = centerP + this.transform.rotation * offsMoveCenter;
     }
 
+    #region カットモード
+    class DrawCutLineWork_
+    {
+        public bool    bNowDrawLine_ = false;
+        public Vector2 lastOnPlatePos_;
+        public Vector2 lastDrawPlatePos_;
+        public Vector2 lastDrawPlateDiffV_;
+    }
+    DrawCutLineWork_ drawCutLineWork_ = new DrawCutLineWork_();
+
+    /// <summary>
+    /// カットライン描画開始
+    /// </summary>
+    public bool BeginDrawPlateCuttingLine(Ray ray)
+    {
+        if (drawCutLineWork_.bNowDrawLine_) return false;
+
+        if (RaycastPlateXZ_(ray, out drawCutLineWork_.lastOnPlatePos_))
+        {
+            drawCutLineWork_.bNowDrawLine_ = true;
+            drawCutLineWork_.lastDrawPlateDiffV_ = new Vector2(0, 0);
+            drawCutLineWork_.lastDrawPlatePos_ = drawCutLineWork_.lastOnPlatePos_;
+
+            return true;
+        }
+        return false;
+    }
+    public void AddDrawPlateCuttingLine(Ray ray)
+    {
+        if (!drawCutLineWork_.bNowDrawLine_) return;
+
+        var nowOnPlatePosXZ = new Vector2();
+        if (false==RaycastPlateXZ_(ray, out nowOnPlatePosXZ))
+        {
+            return;
+        }
+        var diffV = nowOnPlatePosXZ - drawCutLineWork_.lastOnPlatePos_;
+        if (diffV.magnitude > QBLOCK_SIZE_XZ / 2)
+        {
+            bool bDraw   = false;
+            bool bIsVert = false;
+
+            diffV.Normalize();
+            //ある程度、縦横に方向がついていたら第一条件クリアです
+            if (Mathf.Abs(diffV.x) > 0.8f)
+            {
+                bIsVert = false;
+                if (Mathf.Abs(drawCutLineWork_.lastDrawPlateDiffV_.x) > 0.8f)
+                {
+                    // 前回と同じ方向ならば使用するラインをスナップします(違う方向を通さず直線を引く事は大抵意図と違うという想定）
+                    drawCutLineWork_.lastOnPlatePos_.y = drawCutLineWork_.lastDrawPlatePos_.y;                    
+                }
+                else
+                {
+                    if (drawCutLineWork_.lastDrawPlateDiffV_.sqrMagnitude != 0)
+                    {
+                        // 前回と違う方向ならば前回の描画位置を起点と考えてはみ出る分を無視します
+                        var dir = nowOnPlatePosXZ.x - drawCutLineWork_.lastDrawPlatePos_.x;
+                        if (diffV.y > 0 != dir > 0)
+                        {
+                            bDraw = false;
+                        }
+                        else
+                        {
+                            //次の作業TODO; 描画位置の先端から繋がるようなラインに補正をする
+                        }
+                    }
+                }
+                bDraw = true;
+            }
+            else if (Mathf.Abs(diffV.y) > 0.8f)
+            {
+                bIsVert = true;
+                bDraw   = true;
+                if (Mathf.Abs(drawCutLineWork_.lastDrawPlateDiffV_.y) > 0.8f)
+                {
+                    // 前回と同じ方向ならば使用するラインをスナップします(違う方向を通さず直線を引く事は大抵意図と違うという想定）
+                    drawCutLineWork_.lastOnPlatePos_.x = drawCutLineWork_.lastDrawPlatePos_.x;
+                    bDraw = true;
+                }
+                else
+                {
+                    if(drawCutLineWork_.lastDrawPlateDiffV_.sqrMagnitude!=0)
+                    {
+                        // 前回と違う方向ならば前回の描画位置を起点と考えてはみ出る分を無視します
+                        var dir = nowOnPlatePosXZ.y - drawCutLineWork_.lastDrawPlatePos_.y;
+                        if (diffV.y > 0 != dir > 0)
+                        {
+                            bDraw = false;
+                        }
+                        else
+                        {
+                            //次の作業TODO; 描画位置の先端から繋がるようなラインに補正をする
+                        }
+                    }
+                }
+            }
+            if (bDraw)
+            {
+                var drawNV = (drawCutLineWork_.lastOnPlatePos_ - drawCutLineWork_.lastDrawPlatePos_);
+                var drawLen = drawNV.magnitude;
+                drawNV.Normalize();
+                for (float len = 0; len < drawLen; len += QBLOCK_SIZE_XZ / 2)
+                {
+                    if (bIsVert){
+                        cutting_.SetVertLine_CutOperation_FromPlatePos(drawNV * len + drawCutLineWork_.lastDrawPlatePos_, CuttingInfo_.CutOperations.Cut);
+                    }
+                    else{
+                        cutting_.SetHoriLine_CutOperation_FromPlatePos(drawNV * len + drawCutLineWork_.lastDrawPlatePos_, CuttingInfo_.CutOperations.Cut);
+                    }
+                }
+                if (bIsVert){
+                    cutting_.SetVertLine_CutOperation_FromPlatePos(drawCutLineWork_.lastOnPlatePos_, CuttingInfo_.CutOperations.Cut);
+                }
+                else{
+                    cutting_.SetHoriLine_CutOperation_FromPlatePos(drawCutLineWork_.lastOnPlatePos_, CuttingInfo_.CutOperations.Cut);
+                }
+                cutting_.ReBuildDrawObject();
+                drawCutLineWork_.lastDrawPlatePos_ = drawCutLineWork_.lastOnPlatePos_;
+                drawCutLineWork_.lastOnPlatePos_ = nowOnPlatePosXZ;
+                drawCutLineWork_.lastDrawPlateDiffV_ = diffV;
+            }
+        }
+    }
+    public void FinishDrawPlateCuttingLine()
+    {
+        drawCutLineWork_.bNowDrawLine_ = false;
+    }
+    #endregion
+
+
     #endregion
 
 
@@ -655,10 +788,9 @@ public class UniPlate : MonoBehaviour {
 	// Update is called once per frame
 	void Update () {
 
-        MoveToMainCamForward(100);
+        MoveToMainCamForward(50);
 	
 	}
-
 
     bool RaycastPlateXZ_(Ray ray,out Vector2 platePosXZ)
     {
@@ -693,79 +825,27 @@ public class UniPlate : MonoBehaviour {
         }
     }
 
-    bool    bNowPlateDrag_;
-    Vector2 lastPlateDragPos_;
-    Vector2 lastPlateDragPutPos_;
-    Vector2 lastPlateDragDiffV_;
-
     void OnMouseDown()
     {
         var ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-        if (RaycastPlateXZ_(ray, out lastPlateDragPos_))
+        if (BeginDrawPlateCuttingLine(ray))
         {
-            bNowPlateDrag_ = true;
-            lastPlateDragDiffV_ = new Vector2(0, 0);
-            lastPlateDragPutPos_ = new Vector2(lastPlateDragPos_.x, lastPlateDragPos_.y);
         }
     }
 
     void OnMouseDrag()
     {
-        if(bNowPlateDrag_)
+        if(drawCutLineWork_.bNowDrawLine_)
         {
             var ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-            var platePosXZ = new Vector2();
-            if (RaycastPlateXZ_(ray, out platePosXZ))
-            {
-                var diffV = platePosXZ - lastPlateDragPos_;
-                if (diffV.magnitude > QBLOCK_SIZE_XZ/2)
-                {
-                    diffV.Normalize();
-                    //ある程度、縦横に方向がついていたら第一条件クリアです
-                    if (Mathf.Abs(diffV.x) > 0.8f)
-                    {
-                        // 前回と同じ方向ならば使用するラインをスナップします(違う方向を通さず直線を引く事は大抵意図と違うという想定）
-                        if (Mathf.Abs(lastPlateDragDiffV_.x) > 0.8f)
-                        {
-                            lastPlateDragPos_.y = lastPlateDragPutPos_.y;
-                            /*
-                            var drawNV = (lastPlateDragPos_ - lastPlateDragPutPos_);
-                            var drawLen = drawNV.magnitude;
-                            drawNV.Normalize();
-                            for (float len = 0; len < drawLen; len += QBLOCK_SIZE_XZ / 2)
-			                {
-                                cutting_.SetHoriLine_CutOperation_FromPlatePos(drawNV * len + lastPlateDragPutPos_, CuttingInfo_.CutOperations.Cut);
-			                }
-                           */
-                        }
-                        cutting_.SetHoriLine_CutOperation_FromPlatePos(lastPlateDragPos_, CuttingInfo_.CutOperations.Cut);
-                        cutting_.ReBuildDrawObject();
-                        lastPlateDragPutPos_ = lastPlateDragPos_;
-                        lastPlateDragPos_ = platePosXZ;
-                        lastPlateDragDiffV_ = diffV;
-                    }
-                    else if (Mathf.Abs(diffV.y) > 0.8f)
-                    {
-                        if (Mathf.Abs(lastPlateDragDiffV_.y) > 0.8f)
-                        {
-                            lastPlateDragPos_.x = lastPlateDragPutPos_.x;
-                            /*
-                            var drawNV = (lastPlateDragPos_ - lastPlateDragPutPos_);
-                            var drawLen = drawNV.magnitude;
-                            drawNV.Normalize();
-                            for (float len = 0; len < drawLen; len += QBLOCK_SIZE_XZ / 2)
-                            {
-                                cutting_.SetVertLine_CutOperation_FromPlatePos(drawNV * len + lastPlateDragPutPos_, CuttingInfo_.CutOperations.Cut);
-                            }*/
-                        }
-                        cutting_.SetVertLine_CutOperation_FromPlatePos(lastPlateDragPos_, CuttingInfo_.CutOperations.Cut);
-                        cutting_.ReBuildDrawObject();
-                        lastPlateDragPutPos_ = lastPlateDragPos_;
-                        lastPlateDragPos_ = platePosXZ;
-                        lastPlateDragDiffV_ = diffV;
-                    }
-                }
-            }
+            AddDrawPlateCuttingLine(ray);
+        }
+    }
+    void OnMouseUp()
+    {
+        if (drawCutLineWork_.bNowDrawLine_)
+        {
+            FinishDrawPlateCuttingLine();
         }
     }
 }
