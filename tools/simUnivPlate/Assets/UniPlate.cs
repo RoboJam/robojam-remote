@@ -603,18 +603,22 @@ public class UniPlate : MonoBehaviour {
     public void MoveToMainCamForward(float forwardLen)
     {
         var u = Camera.main.transform.up;
-        var l = Camera.main.transform.right;
+        var r = Camera.main.transform.right;
         var f = Camera.main.transform.forward;
         var p = Camera.main.transform.position;
         
-        var centerP = p + f * forwardLen;
+        var centerP = p +f * forwardLen;
         var sizeX   = PlateSizeBlockX * BLOCK_SIZE_XZ;
         var sizeZ   = PlateSizeBlockZ * BLOCK_SIZE_XZ;
 
-        this.transform.position = centerP;
-//        this.transform.rotation = Quaternion.LookRotation(u, f);
-//        this.transform.position -= l * sizeX / 2.0f;
-        //        this.transform.position -= u * sizeZ / 2.0f;
+        
+        //ローカル座標系で中心に持ってくるための変換
+        var offsRQ         = Quaternion.AngleAxis(90, Vector3.right);
+        var offsMoveCenter = -Vector3.right * sizeX / 2.0f + -Vector3.forward * sizeZ / 2.0f;
+
+        // カメラのむきに合わせた変換と合成してセットします
+        this.transform.rotation = Camera.main.transform.rotation * offsRQ;
+        this.transform.position = centerP + this.transform.rotation * offsMoveCenter;
     }
 
     #endregion
