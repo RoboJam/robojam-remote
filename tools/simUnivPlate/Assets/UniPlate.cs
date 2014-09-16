@@ -688,6 +688,7 @@ public class UniPlate : MonoBehaviour {
                         else
                         {
                             //次の作業TODO; 描画位置の先端から繋がるようなラインに補正をする
+                            drawCutLineWork_.lastOnPlatePos_ = drawCutLineWork_.lastDrawPlatePos_;
                         }
                     }
                 }
@@ -716,6 +717,7 @@ public class UniPlate : MonoBehaviour {
                         else
                         {
                             //次の作業TODO; 描画位置の先端から繋がるようなラインに補正をする
+                            drawCutLineWork_.lastOnPlatePos_ = drawCutLineWork_.lastDrawPlatePos_;
                         }
                     }
                 }
