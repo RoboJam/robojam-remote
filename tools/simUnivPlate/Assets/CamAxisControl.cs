@@ -131,63 +131,29 @@ public class CamAxisControl : MonoBehaviour
 
     void mouseEvent()
 	{
-//		float delta = Input.GetAxis("Mouse ScrollWheel");
-//		if (delta != 0.0f)
-//			this.mouseWheelEvent(delta);
-
-		if (Input.GetMouseButtonDown((int)MouseButtonDown.MBD_LEFT) ||
-			Input.GetMouseButtonDown((int)MouseButtonDown.MBD_MIDDLE) ||
-			Input.GetMouseButtonDown((int)MouseButtonDown.MBD_RIGHT))
-			this.oldPos = Input.mousePosition;
-
-		this.mouseDragEvent(Input.mousePosition);
-
-		return;
-	}
-
-	void mouseDragEvent(Vector3 mousePos)
-	{
-		Vector3 diff = mousePos - oldPos;
-
-        if (Input.GetKey(KeyCode.LeftAlt))
+        Vector3 diff = Input.mousePosition - oldPos;
+        if (diff.magnitude < 10.0f)//タッチで操作するとマウスがジャンプするので閾値を設けておきます
         {
+            if (Input.GetKey(KeyCode.LeftAlt))
             {
                 if (Mathf.Abs(diff.x) > Vector3.kEpsilon)
                 {
-                    this.transform.Rotate(0,diff.x,0);
+                    var q = Quaternion.AngleAxis(diff.x, Vector3.up);
+                    this.transform.rotation = q * this.transform.rotation;
                 }
                 if (Mathf.Abs(diff.y) > Vector3.kEpsilon)
                 {
-                    this.transform.Rotate(diff.y,0,0);
+                    var crossAxis = Vector3.Cross(Camera.main.transform.forward, Vector3.up);
+                    if (Mathf.Abs(Vector3.Dot(Camera.main.transform.forward, Vector3.up)) > 0.9f)
+                    {
+                        crossAxis = Vector3.Cross(Camera.main.transform.up, Vector3.up);
+                    }
+                    var q = Quaternion.AngleAxis(diff.y, crossAxis);
+                    this.transform.rotation = q * this.transform.rotation;
                 }
             }
-
-            
-            if (Input.GetMouseButtonDown((int)MouseButtonDown.MBD_LEFT))
-            {/*
-                var ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-                var hitInfo = new RaycastHit();
-                if (Physics.Raycast(ray, out hitInfo))
-                {
-                    this.transform.LookAt(hitInfo.collider.transform);
-                }*/                
-            }
-            else
-		    {/*
-                if (Input.GetKey(KeyCode.LeftShift))
-                {
-                    if (diff.magnitude > Vector3.kEpsilon)
-                        this.cameraTranslate(-diff / 10.0f);
-                }
-                else
-                {
-                    if (diff.magnitude > Vector3.kEpsilon)
-                        this.cameraRotate(new Vector3(diff.y, diff.x, 0.0f));
-                }*/
-		    }
         }
-
-		this.oldPos = mousePos;
+        this.oldPos = Input.mousePosition;
 
 		return;
 	}

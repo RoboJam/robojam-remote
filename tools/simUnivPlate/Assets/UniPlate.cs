@@ -623,7 +623,7 @@ public class UniPlate : MonoBehaviour {
         this.transform.position = centerP + this.transform.rotation * offsMoveCenter;
     }
 
-    #region カットモード
+    #region カットモード BeginDrawPlateCuttingLine, ...
     class DrawCutLineWork_
     {
         public bool    bNowDrawLine_ = false;
@@ -789,9 +789,6 @@ public class UniPlate : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
-
-        MoveToMainCamForward(50);
-	
 	}
 
     bool RaycastPlateXZ_(Ray ray,out Vector2 platePosXZ)
