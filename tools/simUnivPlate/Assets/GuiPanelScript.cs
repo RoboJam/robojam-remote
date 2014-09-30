@@ -18,7 +18,16 @@ public class GuiPanelScript : MonoBehaviour {
         int offsY = 10;
         if (GUI.Button(new Rect(10, offsY, 100, 40), "Cut"))
         {
-
+            var ray = new Ray(Camera.main.transform.position, Camera.main.transform.forward);
+            var hitInfo = new RaycastHit();
+            if(Physics.Raycast(ray,out hitInfo))
+            {
+                var uniPlateObj = hitInfo.collider.gameObject.GetComponent<UniPlate>();
+                if(uniPlateObj!=null)
+                {
+                    uniPlateObj.ExecuteCut();
+                }
+            }
         }
         offsY += 45;
         if (GUI.Button(new Rect(10, offsY, 100, 40), "Catch Center"))

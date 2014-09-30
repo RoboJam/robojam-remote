@@ -267,6 +267,21 @@ public class UniPlate : MonoBehaviour {
             gameobject.GetComponent<MeshRenderer>().material = material;
         }
         #endregion
+
+        /// <summary>
+        /// 横線のカット情報を取得
+        /// </summary>
+        /// <param name="lineIndex">横線の位置</param>
+        /// <param name="xBlockIndex">横の対象のブロック位置</param>
+        /// <returns></returns>
+        public CutOperations GetHoriLineCutOp(int lineIndex, int xBlockIndex)
+        {
+            return horiCutLines_[lineIndex, xBlockIndex];
+        }
+        public CutOperations GetVertLineCutOp(int lineIndex,int zBlockIndex)
+        {
+            return vertCutLines_[lineIndex, zBlockIndex];
+        }
     }
 
     protected QuarterInfo_[,]    plateBuildMap_;
@@ -539,6 +554,10 @@ public class UniPlate : MonoBehaviour {
                 var combineInsLst = combineInsLsts[zzQ / (DIV_DRAW_SIZE_XZ * 2), xxQ / (DIV_DRAW_SIZE_XZ * 2)];
 
                 var qinfo = plateBuildMap_[zzQ, xxQ];
+                if (qinfo == null)
+                {
+                    continue;
+                }
 
                 Matrix4x4 mtx;
                 {
@@ -755,6 +774,108 @@ public class UniPlate : MonoBehaviour {
     }
     #endregion
 
+    /// <summary>
+    /// カットを実行
+    /// </summary>
+    public void ExecuteCut()
+    {
+        int h = plateBuildMap_.GetLength(0);
+        int w = plateBuildMap_.GetLength(1);
+        
+        var labelMap = new int[h,w];
+        var labelLinkTbl = new Dictionary<int,int>();
+        int labelSeed = 0;
+
+        // ラベリングしていきます
+        for (int yy = 0; yy < h; yy++)
+        {
+            if (yy == 0)
+            {
+                int nowLabel = labelSeed++;
+                for (int xx = 0; xx < w; xx++)
+                {
+                    if (xx > 0)
+                    {
+                        if(cutting_.GetVertLineCutOp(xx-1, yy) == CuttingInfo_.CutOperations.Cut)
+                        {
+                            nowLabel = labelSeed++;
+                        }
+                    }
+                    labelMap[yy, xx] = nowLabel;
+                }
+            }
+            else
+            {
+                // 一つ上のブロックを起点にします
+                int nowLabel = labelMap[yy-1, 0];
+                for (int xx = 0; xx < w; xx++)
+                {
+                    if (cutting_.GetHoriLineCutOp(yy - 1, xx) == CuttingInfo_.CutOperations.None)
+                    {
+                        if (xx==0 || cutting_.GetVertLineCutOp(xx - 1, yy) == CuttingInfo_.CutOperations.None)
+                        {
+                            //上とつながる、左とつながる場合
+                            if (labelMap[yy - 1, xx] != nowLabel)
+                            {
+                                // 上と違うラベルの場合、２つの領域が連結されます
+                                labelLinkTbl[nowLabel] = labelMap[yy - 1, xx];
+                            }
+                        }
+                        else
+                        {
+                            //上とつながる、左とつながら無い場合
+                            nowLabel = labelMap[yy - 1, xx];
+                        }
+                    }
+                    else
+                    {
+                        if (xx==0 || cutting_.GetVertLineCutOp(xx - 1, yy) == CuttingInfo_.CutOperations.None)
+                        {
+                            //上とつながら無い、左とつながる場合
+                        }
+                        else
+                        {
+                            //上とつながら無い、左とつながら無い場合
+                            nowLabel = labelSeed++;
+                        }
+                    }
+                    labelMap[yy, xx] = nowLabel;
+                }    
+            }
+        }
+        // ラベルを振りなおします
+        var labelSet = new HashSet<int>();
+        for (int yy = 0; yy < h; yy++)
+        {
+            for (int xx = 0; xx < w; xx++)
+            {
+                if (labelLinkTbl.ContainsKey(labelMap[yy, xx]))
+                {
+                    labelMap[yy, xx] = labelLinkTbl[labelMap[yy, xx]];
+                }
+                labelSet.Add(labelMap[yy, xx]);
+            }
+        }
+        // 領域が２つ以上であれば分割します
+        if(labelSet.Count>1)
+        {
+            Debug.Log(string.Format("labelSet.Count = {0}", labelSet.Count));
+
+            for (int zz = 0; zz < h; zz++)
+            {
+                for (int xx = 0; xx < w; xx++)
+                {
+                    if(labelMap[zz, xx] != labelSet.GetEnumerator().Current)
+                    {
+                        plateBuildMap_[zz, xx] = null;
+                    }
+                }
+            }        
+        }
+
+
+        RebuildDrawPlateObject_();
+    }
 
     #endregion
 
