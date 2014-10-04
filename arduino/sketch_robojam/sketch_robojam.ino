@@ -30,6 +30,11 @@ enum {
   CODE_CAMERA_UP = '3',
   CODE_CAMERA_DOWN = '4',
 
+  CODE_CMD_START        = '$',
+  CODE_CMD_SET_CAM_DIR  = 'R',
+  CODE_CMD_SEP_MARK     = ',',
+  CODE_CMD_END_MARK     = ';',
+
   DELAY_AFTER_CODE_MILLIS = 50,
 
   SERVOS_COUNT = 16,
@@ -112,6 +117,40 @@ void cameraVertical(int deg)
   }
 }
 
+void cameraDirect1000(int v1000,int h1000)
+{
+  if(v1000>1000)v1000=1000;
+  if(h1000>1000)h1000=1000;
+  if(v1000<0)v1000=0;
+  if(h1000<0)h1000=0;
+  servos.setposition(SERVO_VERTICAL, (SERVO_DEG_MAX - SERVO_DEG_MIN)*v1000 / 1000);
+  servos.setposition(SERVO_HORIZON,  (SERVO_DEG_MAX - SERVO_DEG_MIN)*h1000 / 1000);
+}
+
+bool cmdReadNumber(int& number)
+{
+  number=0;
+  int sign = 1;
+  int pos=0;
+  for(;;){
+      char c = Serial.read();
+      if(0==pos){
+          if('-'==c){ sign = -1; pos++; continue; }
+          if('+'==c){ sign = +1; pos++; continue; }
+      }
+      if(c>='0' &&　c<='9'){
+          number *= 10;
+          number += (int)(c-'9');
+          pos++;
+      }
+      else{
+          return false;
+      }
+      if(CODE_CMD_SEP_MARK == c||CODE_CMD_SEP_MARK == c)break;
+  }
+  return true;
+}
+
 void motorStop()
 {
   analogWrite(PIN_A_PWM, 0);
@@ -152,6 +191,24 @@ void loop(){
         break;
       case CODE_CAMERA_DOWN:
         cameraVertical(-SERVO_DEG_UNIT);
+        break;
+      case CODE_CMD_START:
+        switch(Serial.read())
+        {
+          // カメラの角度を直にセット
+          case CODE_CMD_SET_CAM_DIR:
+            {
+              int v1000=500, h1000=500;
+              if(false==cmdReadNumber(v1000)){
+                break;
+              }
+              if(false==cmdReadNumber(h1000)){
+                break;
+              }
+              cameraDirect1000(v1000,h1000);
+            }
+            break;
+        }
         break;
       default:
         motorStop();
