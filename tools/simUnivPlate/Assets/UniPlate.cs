@@ -39,6 +39,7 @@ public class UniPlate : MonoBehaviour {
         };
         public BlockTypes BlockType;
         public RotateDirs RotateDir;
+        public float TestOffsetY = 0;
     }
     protected class PlateDrawObject
     {
@@ -47,7 +48,7 @@ public class UniPlate : MonoBehaviour {
             gameobject = new GameObject();
             gameobject.AddComponent<MeshFilter>();
             gameobject.AddComponent<MeshRenderer>();
-            gameobject.AddComponent<BoxCollider>();
+            //gameobject.AddComponent<BoxCollider>();
             gameobject.name = "PlateDrawObject";
         }
         public GameObject gameobject;
@@ -162,6 +163,24 @@ public class UniPlate : MonoBehaviour {
                     vertCutLines_[vertLineIdx, vertSegIdx] = cutOp;
                 }
             }        
+        }
+
+        public void ClearAll()
+        {
+            for(int ii=0; ii < horiCutLines_.GetLength(0);ii++)
+            {
+                for (int jj = 0; jj < horiCutLines_.GetLength(1); jj++)
+                {
+                    horiCutLines_[ii, jj] = CutOperations.None;
+                }
+            }
+            for (int ii = 0; ii < vertCutLines_.GetLength(0); ii++)
+            {
+                for (int jj = 0; jj < vertCutLines_.GetLength(1); jj++)
+                {
+                    vertCutLines_[ii, jj] = CutOperations.None;
+                }
+            }
         }
 
         #region ReBuildDrawObject
@@ -563,7 +582,7 @@ public class UniPlate : MonoBehaviour {
                 {
                     float roffsXZ = 2.5f / 2;
                     mtx = Matrix4x4.TRS(new Vector3(-roffsXZ, 0, -roffsXZ), Quaternion.identity, Vector3.one);
-                    mtx = Matrix4x4.TRS(new Vector3(xxQ * 2.5f + roffsXZ, 0, zzQ * 2.5f + roffsXZ), Quaternion.Euler(0, (int)qinfo.RotateDir * 90, 0), Vector3.one) * mtx;
+                    mtx = Matrix4x4.TRS(new Vector3(xxQ * 2.5f + roffsXZ, 0 + qinfo.TestOffsetY, zzQ * 2.5f + roffsXZ), Quaternion.Euler(0, (int)qinfo.RotateDir * 90, 0), Vector3.one) * mtx;
                 }
                 Mesh mesh = null;
                 {
@@ -594,8 +613,8 @@ public class UniPlate : MonoBehaviour {
                 plateDrawObject.gameobject.GetComponent<MeshFilter>().sharedMesh      = plateDrawObject.mesh;
                 plateDrawObject.gameobject.GetComponent<MeshFilter>().sharedMesh.name = string.Format("plateMesh_{0}_{0}", zz, xx);
                 plateDrawObject.gameobject.GetComponent<MeshRenderer>().material = GetComponent<MeshRenderer>().material;
-                plateDrawObject.gameobject.GetComponent<BoxCollider>().size = plateDrawObject.mesh.bounds.size;
-                plateDrawObject.gameobject.GetComponent<BoxCollider>().center = plateDrawObject.mesh.bounds.center;
+                // plateDrawObject.gameobject.GetComponent<BoxCollider>().size = plateDrawObject.mesh.bounds.size;
+                //plateDrawObject.gameobject.GetComponent<BoxCollider>().center = plateDrawObject.mesh.bounds.center;
             }
         }
     }
@@ -791,10 +810,11 @@ public class UniPlate : MonoBehaviour {
         {
             if (yy == 0)
             {
+                // 縦の開始の場合
                 int nowLabel = labelSeed++;
                 for (int xx = 0; xx < w; xx++)
                 {
-                    if (xx > 0)
+                    if (xx != 0)
                     {
                         if(cutting_.GetVertLineCutOp(xx-1, yy) == CuttingInfo_.CutOperations.Cut)
                         {
@@ -829,7 +849,12 @@ public class UniPlate : MonoBehaviour {
                     }
                     else
                     {
-                        if (xx==0 || cutting_.GetVertLineCutOp(xx - 1, yy) == CuttingInfo_.CutOperations.None)
+                        if (xx==0)
+                        {
+                            //上とつながら無い、横の起点び場合
+                            nowLabel = labelSeed++;
+                        }
+                        else if(cutting_.GetVertLineCutOp(xx - 1, yy) == CuttingInfo_.CutOperations.None)
                         {
                             //上とつながら無い、左とつながる場合
                         }
@@ -867,14 +892,14 @@ public class UniPlate : MonoBehaviour {
                 {
                     if(labelMap[zz, xx] != labelSet.GetEnumerator().Current)
                     {
-                        plateBuildMap_[zz, xx] = null;
+                        plateBuildMap_[zz, xx].TestOffsetY = -labelMap[zz, xx] * 2.8f;
                     }
                 }
-            }        
+            }
+            RebuildDrawPlateObject_();
+            cutting_.ClearAll();
+            cutting_.ReBuildDrawObject();
         }
-
-
-        RebuildDrawPlateObject_();
     }
 
     #endregion

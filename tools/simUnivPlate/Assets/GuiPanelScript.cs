@@ -22,7 +22,9 @@ public class GuiPanelScript : MonoBehaviour {
             var hitInfo = new RaycastHit();
             if(Physics.Raycast(ray,out hitInfo))
             {
-                var uniPlateObj = hitInfo.collider.gameObject.GetComponent<UniPlate>();
+                Debug.Log(hitInfo.collider.gameObject.ToString());
+
+                var uniPlateObj = GetUniPlate_FindUpTree(hitInfo.collider.gameObject);
                 if(uniPlateObj!=null)
                 {
                     uniPlateObj.ExecuteCut();
@@ -36,12 +38,31 @@ public class GuiPanelScript : MonoBehaviour {
             var hitInfo = new RaycastHit();
             if(Physics.Raycast(ray,out hitInfo))
             {
-                var uniPlateObj = hitInfo.collider.gameObject.GetComponent<UniPlate>();
-                if(uniPlateObj!=null)
+                var uniPlateObj = GetUniPlate_FindUpTree(hitInfo.collider.gameObject);
+                if (uniPlateObj != null)
                 {
                     uniPlateObj.MoveToMainCamForward(50);
                 }
             }
         }
     }
+
+    UniPlate GetUniPlate_FindUpTree(GameObject gameObj)
+    {
+        for (; ; )
+        {
+            var uniPlateObj = gameObj.GetComponent<UniPlate>();
+            if (uniPlateObj != null)
+            {
+                return uniPlateObj;
+            }
+            if (null == gameObj.transform.parent)
+            {
+                break;
+            }
+            gameObj = gameObj.transform.parent.gameObject;
+        }
+        return null;
+    }
+
 }
