@@ -214,7 +214,7 @@
                                                 <Parameter name="scaleY" inherits_from_parent="1" content_type="2" value="1" default_value="1" min="-10" max="10" tooltip="Scale along the y axis of the 3D model of the object" id="24" />
                                                 <Parameter name="scaleZ" inherits_from_parent="1" content_type="2" value="1" default_value="1" min="-10" max="10" tooltip="Scale along the z axis of the 3D model of the object" id="25" />
                                             </Box>
-                                            <Box name="Create Object Representation" id="5" localization="8" tooltip="This box allows to simply store and remove objects from the world representation.&#x0A;&#x0A;Objects stored in the WorldRepresentation with this box can be visualized in the 3D robot view. See the other World Representation boxes for more details." x="403" y="12">
+                                            <Box name="Create Object Representation" id="5" localization="8" tooltip="This box allows to simply store and remove objects from the world representation.&#x0A;&#x0A;Objects stored in the WorldRepresentation with this box can be visualized in the 3D robot view. See the other World Representation boxes for more details." x="398" y="12">
                                                 <bitmap>media/images/box/world_representation/world_rep.png</bitmap>
                                                 <script language="4">
                                                     <content>
@@ -816,6 +816,8 @@ class MyClass(GeneratedClass):
                                                         <![CDATA[import math
 import almath
 
+
+
 class MyClass(GeneratedClass):
     MODEL_STR = "model"
     RED_STR = "colorR"
@@ -864,7 +866,7 @@ class MyClass(GeneratedClass):
         facePos3D    = self.calcFacePosition3D_(faceDetected, faceIndex)
         objName      = "face_%d" % faceInfo[1][0]
         CategoryName = self.getParameter("CategoryName")
-        faceWrObj = [objName, None, CategoryName, facePos3D.toVector()]
+        faceWrObj = [objName, "World", CategoryName, [facePos3D.x,facePos3D.y,facePos3D.z, 0,0,0]]
         print(faceWrObj)
         self.sendStoreObject(faceWrObj)
         self.wrObjectTbl[objName] = faceWrObj
@@ -889,15 +891,14 @@ class MyClass(GeneratedClass):
                     self.updateFaceWorldRepObj_(p, faceIdx)
 
     def onInput_onStorageDone(self, objectName):
-        print("xx" + objectName)
-        #self.sendUpdatePosition([self.objectName,
-        #    self.getParameter(self.X_STR),
-        #    self.getParameter(self.Y_STR),
-        #    self.getParameter(self.Z_STR),
-        #    self.getParameter(self.WX_STR),
-        #    self.getParameter(self.WY_STR),
-        #    self.getParameter(self.WZ_STR)])
-        self.sendUpdateDisplayAttribute([objectName, self.MODEL_STR,   "Robot_Torso"])
+        #self.sendUpdatePosition([objectName,
+        #    0.3,
+        #    0,
+        #    0,
+        #    0,
+        #    0,
+        #    0])
+        self.sendUpdateDisplayAttribute([objectName, self.MODEL_STR,   "sphere"])
         self.sendUpdateDisplayAttribute([objectName, self.RED_STR,     0])
         self.sendUpdateDisplayAttribute([objectName, self.GREEN_STR,   0])
         self.sendUpdateDisplayAttribute([objectName, self.BLUE_STR,    0])
@@ -917,6 +918,7 @@ class MyClass(GeneratedClass):
                                                 <Output name="onNoFace" type="1" type_size="1" nature="1" inner="0" tooltip="No face is detected." id="6" />
                                                 <Output name="sendStoreObject" type="0" type_size="1" nature="2" inner="0" tooltip="" id="7" />
                                                 <Output name="sendUpdateDisplayAttribute" type="0" type_size="1" nature="2" inner="0" tooltip="" id="8" />
+                                                <Output name="sendUpdatePosition" type="0" type_size="1" nature="2" inner="0" tooltip="" id="9" />
                                             </Box>
                                             <Box name="Create Object Representation" id="5" localization="8" tooltip="This box allows to simply store and remove objects from the world representation.&#x0A;&#x0A;Objects stored in the WorldRepresentation with this box can be visualized in the 3D robot view. See the other World Representation boxes for more details." x="375" y="6">
                                                 <bitmap>media/images/box/world_representation/world_rep.png</bitmap>
@@ -1054,10 +1056,10 @@ class MyClass(GeneratedClass):
                                                 <Input name="onStart" type="1" type_size="1" nature="2" inner="0" tooltip="Start the Wait box with the configured timeout value." id="2" />
                                                 <Input name="onStop" type="1" type_size="1" nature="3" inner="0" tooltip="Stop the wait and stimulate the output." id="3" />
                                                 <Output name="timerOutput" type="1" type_size="1" nature="1" inner="0" tooltip="Send a bang once time set in parameters is elapsed, or if the box is stopped and the appropriate parameter is set." id="4" />
-                                                <Parameter name="Timeout (s)" inherits_from_parent="0" content_type="2" value="1" default_value="1" min="0" max="5000" tooltip="Duration the box waits before stimulating the output." id="5" />
+                                                <Parameter name="Timeout (s)" inherits_from_parent="0" content_type="2" value="2" default_value="1" min="0" max="5000" tooltip="Duration the box waits before stimulating the output." id="5" />
                                                 <Parameter name="Trigger timerOutput if cancelled" inherits_from_parent="0" content_type="0" value="0" default_value="1" tooltip="If the box is currently waiting and cancelled, output will be stimulated." id="6" />
                                             </Box>
-                                            <Box name="Edit Object Representation" id="3" localization="8" tooltip="This box allows to simply edit display properties of objects from the world representation.&#x0A;&#x0A;Objects stored in the WorldRepresentation with this box can be visualized in the 3D robot view. See parameters for more details." x="375" y="114">
+                                            <Box name="Edit Object Representation" id="3" localization="8" tooltip="This box allows to simply edit display properties of objects from the world representation.&#x0A;&#x0A;Objects stored in the WorldRepresentation with this box can be visualized in the 3D robot view. See parameters for more details." x="429" y="212">
                                                 <bitmap>media/images/box/world_representation/world_rep.png</bitmap>
                                                 <script language="4">
                                                     <content>
@@ -1107,6 +1109,8 @@ class MyClass(GeneratedClass):
             return
         self.lock.acquire()
         categoryName = self.objectCategory(objectName)
+        print("xxxx" + objectName)
+        print("xxxx" + str(self.wr.findObject(objectName)))
         self.setupDisplayAttribute(categoryName)
         self.updateDisplayAttribute(objectName, displayAttribute, displayAttributeValue)
         self.lock.release()
@@ -1192,13 +1196,98 @@ class MyClass(GeneratedClass):
                                                 <Output name="done" type="3" type_size="1" nature="2" inner="0" tooltip="Signal sent when a processing for the given object is finished." id="3" />
                                                 <Output name="onError" type="3" type_size="1" nature="2" inner="0" tooltip="Standard onError output." id="4" />
                                             </Box>
+                                            <Box name="Move Object Representation" id="4" localization="8" tooltip="This box allows to simply move objects from the world representation.&#x0A;&#x0A;Objects stored in the WorldRepresentation with this box can be visualized in the 3D robot view. See the other World Representation boxes for more details." x="434" y="106">
+                                                <bitmap>media/images/box/world_representation/world_rep.png</bitmap>
+                                                <script language="4">
+                                                    <content>
+                                                        <![CDATA[class MyClass(GeneratedClass):
+    def __init__(self):
+        GeneratedClass.__init__(self)
+        try:
+            self.wr = ALProxy("ALWorldRepresentation")
+        except Exception as e:
+            self.onError(e)
+
+    def onLoad(self):
+        #put initialization code here
+        pass
+
+    def onUnload(self):
+        #put clean-up code here
+        pass
+
+    def onInput_updatePosition(self, p):
+        objectName = str()
+        import almath
+        pose = almath.Position6D(0, 0, 0, 0, 0, 0)
+        try:
+            if isinstance(p, basestring):
+                raise Exception("onInput_updatePosition(%s): expected a list "\
+                    "(see tooltip for details)" % (p))
+            objectName = p[0]
+            parentName = self.getObjectParent(objectName)
+            poseVec = self.getPosition6D(objectName, parentName)
+            pose = almath.Position6D(
+                poseVec[0],
+                poseVec[1],
+                poseVec[2],
+                poseVec[3],
+                poseVec[4],
+                poseVec[5])
+            if len(p) >= 4:
+                pose.x = p[1]
+                pose.y = p[2]
+                pose.z = p[3]
+            if len(p) >= 7:
+                pose.wx = p[4]
+                pose.wy = p[5]
+                pose.wz = p[6]
+        except Exception as e:
+            self.logger.error("onInput_updatePosition(%s): error in parameters "\
+                "(see tooltip for details on expected parameter format): %s" % (p, e))
+            return
+        self.updatePosition(objectName, pose)
+        self.done(objectName)
+
+    def getObjectParent(self, objectName):
+        try:
+            parentName = self.wr.getObjectParentName(objectName)
+            return parentName
+        except Exception as e:
+            self.logger.warning("wr.getObjectParent(%s) error: %s" % (objectName, e))
+
+    def getPosition6D(self, objectName, parentName):
+        try:
+            position = self.wr.getPosition6D(objectName, parentName)
+            return position
+        except Exception as e:
+            self.logger.warning("wr.getPosition6D(%s, %s) error: %s" % (objectName, parentName, e))
+
+    def updatePosition(self, objectName, pose):
+        try:
+            vectorPosition = [pose.x, pose.y, pose.z, pose.wx, pose.wy, pose.wz]
+            ret = self.wr.updatePosition(objectName, vectorPosition, True)
+            if ret is not 0:
+                self.logger.warning("wr.updatePosition(%s, %s) error code: %d"
+                    % (objectName, pose, ret))
+        except Exception as e:
+            self.logger.warning("wr.updatePosition(%s, %s) error: %s"
+                % (objectName, pose, e))]]>
+</content>
+                                                </script>
+                                                <Input name="onLoad" type="1" type_size="1" nature="0" inner="1" tooltip="Signal sent when diagram is loaded." id="1" />
+                                                <Input name="updatePosition" type="0" type_size="1" nature="1" inner="0" tooltip="updates the position of the object given as argument.&#x0A;&#x0A;The value expected is a list organized as follows [objectName, x, y, z (, Wx, Wy, Wz)]" id="2" />
+                                                <Output name="done" type="3" type_size="1" nature="2" inner="0" tooltip="Signal sent when a processing for the given object is finished." id="3" />
+                                                <Output name="onError" type="3" type_size="1" nature="2" inner="0" tooltip="Standard onError output." id="4" />
+                                            </Box>
                                             <Link inputowner="6" indexofinput="4" outputowner="1" indexofoutput="4" />
                                             <Link inputowner="6" indexofinput="2" outputowner="0" indexofoutput="2" />
                                             <Link inputowner="2" indexofinput="2" outputowner="0" indexofoutput="2" />
                                             <Link inputowner="1" indexofinput="2" outputowner="2" indexofoutput="4" />
                                             <Link inputowner="5" indexofinput="2" outputowner="6" indexofoutput="7" />
-                                            <Link inputowner="6" indexofinput="3" outputowner="5" indexofoutput="4" />
                                             <Link inputowner="3" indexofinput="2" outputowner="6" indexofoutput="8" />
+                                            <Link inputowner="6" indexofinput="3" outputowner="5" indexofoutput="4" />
+                                            <Link inputowner="4" indexofinput="2" outputowner="6" indexofoutput="9" />
                                         </Diagram>
                                     </BehaviorKeyframe>
                                 </BehaviorLayer>
